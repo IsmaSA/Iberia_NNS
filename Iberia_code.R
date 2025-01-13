@@ -1,17 +1,110 @@
-
-pacman::p_load(sf,dplyr,tidyr,xlsx,writexl,readxl,sp, ggplot2,terra,raster, rnaturalearth,rnaturalearthdata, readr)
+install.packages('pacman')
+pacman::p_load(sf,dplyr,tidyr,xlsx,writexl,readxl,sp, ggplot2,terra,raster, rnaturalearth,rnaturalearthdata, readr,rgbif)
 
 ### Iberia non-native species
 setwd("C:/Users/Propietario/Desktop/ELZA/Iberia")
 df <- read_xlsx(path = "./Iberia.xlsx")
 
+### Iberia non-native species  LINUX
+setwd("/home/ismael-soto/Desktop/ELZA/Iberia")
+list.files()
+
+df <- read_xlsx(path = './Database/Iberia.xlsx')
+head(df)
+df = df %>% filter(Location %in% c('Spain', 'Portugal', 'Andorra', 'Gibraltar'))
+country = unique(df$Location)
+
+folders = c('Database', 'Codes', 'Plots')
+for(f in folders){
+  if(!file.exists(f)) {
+    dir.create(f)
+    cat('Folder:', f, 'created', '\n')
+  }
+}
+
+
 names(df)
 length(unique(df$New_names))
 unique(df$Location)
-df$Location[df$Location =="Madeira"] <- "Portugal"
-df$Location[df$Location =="Canary Islands"] <- "Spain"
-df$Location[df$Location =="Balearic Islands"] <- "Spain"
-df$Location[df$Location =="Azores"] <- "Portugal"
+
+### GAVIA ------------
+gavia = read_csv('/home/ismael-soto/Downloads/GAVIA_main_data_table.csv')
+gavia = gavia %>% filter(StatusCat =='Established')
+
+setdiff(df$New_names[df$Location == 'Spain'], gavia$Binomial[gavia$CountryName == 'Spain'])
+a= setdiff(gavia$Binomial[gavia$CountryName == 'SPAIN'],   df$New_names[df$Location == 'Spain']) %>% as.data.frame()%>% mutate(Country='Spain')
+b= setdiff(gavia$Binomial[gavia$CountryName == 'PORTUGAL'],   df$New_names[df$Location == 'Portugal'])%>% as.data.frame()%>% mutate(Country='Portugal')
+c= setdiff(gavia$Binomial[gavia$CountryName == 'ANDORRA'],   df$New_names[df$Location == 'Andorra'])%>% as.data.frame()%>% mutate(Country='Andorra')
+d= setdiff(gavia$Binomial[gavia$CountryName == 'GIBRALTAR'],   df$New_names[df$Location == 'Gibraltar'])%>% as.data.frame()%>% mutate(Country='Gibraltar')
+
+data = rbind(a,b,c,d)
+
+###  Get GBIF key ------------
+df1= df %>% filter(is.na(GBIF_key) )
+names = unique(df1$New_names)
+
+keys= data.frame()
+n='Mitrella nomadica'
+for (n in names) {
+  data <- rgbif::occ_search(scientificName = n, limit = 1)
+  if (!is.null(data$data) && all(c('scientificName', 'species', 'speciesKey') %in% colnames(data$data))) {
+    extracted_data <- data$data[, c('scientificName', 'species', 'speciesKey')]
+    extracted_data$old_name <- n
+    keys <- rbind(keys, extracted_data)
+  } else {
+    keys <- rbind(keys, data.frame(scientificName = n, 
+                                   species = NA, 
+                                   speciesKey = NA, 
+                                   old_name = n, 
+                                   stringsAsFactors = FALSE))
+  }}
+names(data$data)
+writexl::write_xlsx(keys, 'extra_keys1.xlsx')
+
+res <- data.frame()
+errors <- data.frame()
+h <- 1
+for (name in names) {
+  cat(h, "/", length(unique(names)), "\n")  
+  h <- h + 1
+
+  tryCatch({
+    data <- name_backbone(name = name)
+    
+    if (!is.null(data)) {
+      data1 <- data[, c("scientificName", "canonicalName", "matchType")]
+      data1$old_name <- name
+      
+      res <- rbind(res, data1)
+    } else {
+      warning("No result for name: ", name)
+    }
+  }, error = function(e) {
+    errors <- rbind(errors, data.frame(name = name, error_message = e$message))
+    cat("Error with name:", name, "\n") 
+  })
+}
+
+###  backbone GBIF ------------
+df1 <- df[is.na(df$Class),]
+sp <- unique(df$New_names)
+n
+res <- data.frame()
+for(n in names){
+  tryCatch({
+data<- name_backbone(name=n)
+  data <- occ_search(scientificName = n, limit = 1)
+  data<- data[["data"]]
+names(data)
+data$old_name = n
+data1<- data[,c("old_name","family","class","phylum")]
+res<- rbind(res,data1)
+}, error = function(e) {
+    cat("Error with name:", n, "\n") 
+  })
+}
+writexl::write_xlsx(res, 'res.xlsx')
+
 
 ###  GBIF extraction ------------
 country <- unique(df$Location)[4]
