@@ -4,7 +4,6 @@
 ## Ismael Soto  - University of South Bohemia in Ceske Budejovice (USB)
 Sys.time()
 ls()
-
 pacman::p_load(sf,dplyr,tidyr,xlsx,writexl,readxl,sp, ggplot2,terra,raster, rnaturalearth,rnaturalearthdata, readr,rgbif)
 
 ### Create the basic folders 
@@ -20,7 +19,7 @@ for(f in folders){
 setwd("/home/ismael-soto/Desktop/ELZA/Iberia")
 list.files()
 
-df <- read_xlsx(path = './Database/Iberia.xlsx')
+df <- readxl::read_xlsx(path = './Database/Iberia.xlsx')
 head(df)
 df = df %>% filter(Location %in% c('Spain', 'Portugal', 'Andorra', 'Gibraltar'))
 names(df)
