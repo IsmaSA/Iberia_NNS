@@ -3,6 +3,7 @@
 
 ## Ismael Soto  - University of South Bohemia in Ceske Budejovice (USB)
 Sys.time()
+ls()
 
 pacman::p_load(sf,dplyr,tidyr,xlsx,writexl,readxl,sp, ggplot2,terra,raster, rnaturalearth,rnaturalearthdata, readr,rgbif)
 
