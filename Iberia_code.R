@@ -39,6 +39,13 @@ d= setdiff(gavia$Binomial[gavia$CountryName == 'GIBRALTAR'],   df$New_names[df$L
 
 data = rbind(a,b,c,d)
 
+
+remotes::install_github(c("ropensci/tabulizerjars", "ropensci/tabulizer"))
+library(tabulizer)
+pdf_file <- "/home/ismael-soto/Downloads/TableS1.pdf"
+tables <- extract_tables(pdf_file, output = "data.frame")
+
+
 ###  Get GBIF key ------------
 df1= df %>% filter(is.na(GBIF_key) )
 names = unique(df1$New_names)
