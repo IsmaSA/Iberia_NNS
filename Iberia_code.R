@@ -1110,14 +1110,13 @@ for (n in c('Spain', 'Portugal', 'Andorra', 'Gibraltar')) {
   
   for (name in names) {
     tryCatch({
-      s <- get_first_introductions(name) # Fetch data for the species
-      s1 <- s %>% filter(ISO3 == code) # Filter for the country
+      s <- get_first_introductions(name)
+      s1 <- s %>% filter(ISO3 == code) 
       
       if (nrow(s1) > 0) {
         res <- rbind(res, data.frame("Species" = name, Location = n,"first_record" = s1$year))
       }
     }, error = function(e) {
-      # Handle errors gracefully
       message(sprintf("Error  '%s' in  '%s': %s", name, n, e$message))
     })
   }

@@ -4,7 +4,6 @@
 # Ismael Soto --- University of South Bohemia in Ceske Budejovice (USB)
 Sys.time()
 
-
 pacman::p_load(sf,dplyr,tidyr,xlsx,writexl,readxl,sp, ggplot2,terra,raster, rnaturalearth,rnaturalearthdata, readr,rgbif)
 
 ### Create the basic folders 
@@ -187,7 +186,23 @@ webshot2::webshot(
  
  cat(country)
 }
- 
+
+
+### Habitats -----
+library(stringr)
+unique(df$Habitat)
+df.hab <- df %>%
+  mutate(Habitat = str_replace_all(Habitat, "\\s+", ""), 
+         Habitat = str_replace_all(Habitat, "-", "|"),
+         Habitat = str_replace_all(Habitat, "FRESHWATER-MARINE", "FRESHWATER|MARINE"))    
+unique(df.hab$Habitat)
+
+df.hab <- df.hab %>% separate_rows(Habitat, sep = "\\|") %>%  filter(Habitat != "")  
+unique(df.hab$Habitat)
+
+
+
+
 ### Pathways of introduction -----
 
 unique(df$Pathway_refined)
@@ -255,9 +270,114 @@ a= df2 %>% group_by(Location, Native_range) %>% summarise(n= n_distinct(New_name
 
 
 ## Figure 2
+range(a$n)
 # better to fix in Inkscape
-
+b <- df[df$Group=="Fishes", ]
 
 ### Temporal trends ------
+list.files()
+df = read_xlsx("All.First.records.xlsx")
+df1 <- df[df$ISO3 %in% c("ESP", "PRT", "AND","GIB"), ]
+df1 <- df1[df1$Native=="FALSE", ]
+df1 <- df1[!df1$Source=="Not dated", ]
+df1 = df1 %>% filter(!is.na(df1$year))
+df1 = df1 %>% filter(year < 2024 & year >0)
+
+df1$ISO3[df1$ISO3 =="ESP"] ="Spain"
+df1$ISO3[df1$ISO3 =="AND"] ="Andorra"
+df1$ISO3[df1$ISO3 =="PRT"] ="Portugal"
+df1$ISO3[df1$ISO3 =="GIB"] ="Gibraltar"
 
 
+
+table(df1$ISO3)
+table(df1$year)
+
+
+res_anual = df1 %>% group_by(year, ISO3) %>% summarise(n=n())
+res_cum <- df1 %>%
+  group_by(ISO3, year) %>% 
+  summarise(n = n(), .groups = "drop") %>% arrange(ISO3, year) %>%  
+  group_by(ISO3) %>% mutate(cumulative_records = cumsum(n))
+
+res_anual <- res_anual %>%
+  group_by(ISO3) %>%
+  mutate(running_median = zoo::rollapply(n, width = 10, FUN = median, fill = NA, align = "center"))
+
+background <- data.frame(
+  xmin = seq(1500, 2050, by = 50),
+  xmax = seq(1550, 2100, by = 50),
+  fill = rep(c("grey70", "white"), length.out = length(seq(1500, 2050, by = 50)))
+)
+
+
+location_colors <- c(
+  "Spain" = "#ff7f00",
+  "Portugal" = "#33a02c", 
+  "Andorra" = "#e31a1c", 
+  "Gibraltar" = "#1f78b4")
+
+
+p1 = ggplot(res_anual, aes(x = year, y = n, color = ISO3, group = ISO3)) +
+  geom_rect(data = background, aes(xmin = xmin, xmax = xmax, ymin = -Inf, ymax = Inf, fill = fill),
+            inherit.aes = FALSE, alpha = 0.5) + ylim(0,30)+  xlim(1700,2025)+
+  scale_x_continuous(breaks = c(1700,1800,1900,2000,2023), limits = c(1700, 2023))+
+  theme_bw(base_size = 12) + coord_cartesian(clip = 'on')+
+  geom_point(size = 2, alpha=0.35) + scale_fill_manual(values = c("grey70" = "lightgrey", "white" = "white"), guide = "none")+
+  scale_color_manual(values = location_colors) +
+  geom_line(aes(y = running_median, color = ISO3), size = 1.2, linetype = "solid") + 
+  labs(
+    x = "Year", y = "Number of first records",
+    color = "Location",  fill = "Location") +
+  theme(
+    axis.title = element_text(face = "bold"),
+    legend.position = c(0.08, 0.8), # Place legend inside the plot
+    legend.background = element_rect(fill = alpha("white", 0.4), color = "black", size = 0.5),
+    axis.text = element_text(size = 12),
+    plot.title = element_text(hjust = 0.5, size = 16, face = "bold")) +
+  annotate("text", x = 1800, y = 20, label = "Industrial Revolution\n(1760–1840)", size = 3.5, color = "black") +
+  annotate("text", x = 2014, y = 25, label = "EU Regulation\n1143/2014", size = 3.5, color = "black") +
+  annotate("text", x = 1986, y = 20, label = "Spain and Portugal\nJoin EU", size = 3.5, color = "black") +
+  # Add curved arrows
+  geom_vline(xintercept = c(1800, 1986, 2014), linetype = "dashed", color = "grey50", size = 0.5, alpha=0.5) +
+  geom_curve(x = 1800, y = 19, xend = 1760, yend = 15, 
+             curvature = 0.2, arrow = arrow(length = unit(0.2, "cm")), color = "black") +
+  geom_curve(x = 2014, y = 24, xend = 2000, yend = 20, 
+             curvature = 0.2, arrow = arrow(length = unit(0.2, "cm")), color = "black") +
+  geom_curve(x = 1986, y = 19, xend = 1975, yend = 15, 
+             curvature = -0.2, arrow = arrow(length = unit(0.2, "cm")), color = "black")
+
+p1
+
+p2= ggplot(res_cum, aes(x = year, y = cumulative_records, color = ISO3, group = ISO3)) +
+  geom_rect(data = background, aes(xmin = xmin, xmax = xmax, ymin = -Inf, ymax = Inf, fill = fill),
+            inherit.aes = FALSE, alpha = 0.5) +  scale_x_continuous(breaks = c(1700,1800,1900,2000,2023), limits = c(1700, 2023))+
+  theme_bw(base_size = 12) + coord_cartesian(clip = 'on')+
+  scale_fill_manual(values = c("grey70" = "lightgrey", "white" = "white"), guide = "none") +
+  scale_color_manual(values = location_colors) +
+  geom_line(aes(y = cumulative_records, color = ISO3), size = 1.2, linetype = "solid") + 
+  labs(
+    x = "Year", y = "Cumulative number of first records",
+    color = "Location",  fill = "Location") +
+  theme(
+    axis.title = element_text(face = "bold"),
+    legend.position = c(0.08, 0.8), # Place legend inside the plot
+    legend.background = element_rect(fill = alpha("white", 0.4), color = "black", size = 0.5),
+    axis.text = element_text(size = 12),
+    plot.title = element_text(hjust = 0.5, size = 16, face = "bold")) + 
+  xlim(1700,2025)+
+  scale_x_continuous(breaks = c(1700,1800,1900,2000,2023), limits = c(1700, 2023))+
+  annotate("text", x = 1800, y = 300, label = "Industrial Revolution\n(1760–1840)", size = 3.5, color = "black") +
+  annotate("text", x = 2014, y = 300, label = "EU Regulation\n1143/2014", size = 3.5, color = "black") +
+  annotate("text", x = 1986, y = 300, label = "Spain and Portugal\nJoin EU", size = 3.5, color = "black") +
+  # Add curved arrows
+  geom_vline(xintercept = c(1800, 1986, 2014), linetype = "dashed", color = "grey50", size = 0.5, alpha=0.5) +
+  geom_curve(x = 1800, y = 19, xend = 1760, yend = 15, 
+             curvature = 0.2, arrow = arrow(length = unit(0.2, "cm")), color = "black") +
+  geom_curve(x = 2014, y = 24, xend = 2000, yend = 20, 
+             curvature = 0.2, arrow = arrow(length = unit(0.2, "cm")), color = "black") +
+  geom_curve(x = 1986, y = 19, xend = 1975, yend = 15, 
+             curvature = -0.2, arrow = arrow(length = unit(0.2, "cm")), color = "black")
+
+library(patchwork)
+p1+p2
