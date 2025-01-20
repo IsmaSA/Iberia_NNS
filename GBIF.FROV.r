@@ -39,7 +39,7 @@ for(country in unique(df$Location)){
     pred_not(pred_in("basisOfRecord",c("FOSSIL_SPECIMEN"))),
     pred("hasCoordinate", TRUE),
     user = "ismaelsoto",
-    pwd = "Ismaputas123.",
+    pwd = "******",
     email = "isma-sa@hotmail.com"
   )
     status <- occ_download_meta(x)$status
@@ -58,7 +58,27 @@ for(country in unique(df$Location)){
     dat <- occ_download_get(z2, overwrite=T) %>%
       occ_download_import() 
     }
-  
+
+
+# spocc  -----
+install.packages("terra", dependencies = TRUE)
+
+install.packages("spocc", dependencies = TRUE)
+install.packages("remotes")
+remotes::install_github("ropensci/spocc")
+library("spocc")
+
+cawr<-'Campylorhynchus brunneicapillus' ##California cactus wren
+cawr_obs<-occ(query = cawr, from=c('inat','ebird','vertnet','idigbio','obis'), limit = 50000, has_coords = TRUE)
+obs<-occ2df(cawr_obs)
+
+
+
+
+
+
+
+
 # read GBIF downloads
 files <- list.files(pattern = ".zip")
 target_file <- "occurrence.txt"
