@@ -1,7 +1,7 @@
 
 ### Code to download GBIF occ PC FROV
 
-pacman::p_load(sf,dplyr,tidyr,xlsx,writexl,readxl,sp, ggplot2,terra,raster, rnaturalearth,rnaturalearthdata, readr,rgbif)
+pacman::p_load(sf,dplyr,tidyr,xlsx,writexl,readxl,sp, CoordinateCleaner, ggplot2,terra,raster, rnaturalearth,rnaturalearthdata, readr,rgbif)
 
 setwd("/home/ismael-soto/Desktop/ELZA/Iberia")
 list.files()
@@ -15,13 +15,14 @@ df= df[!df$New_names %in% c('Ommatotriton sp.','Acridotheres sp.'), ]
 
 
 ###  GBIF extraction ------------
-country <- unique(df$Location)[4]
+country <- unique(df$Location)[3]
 
 for(country in unique(df$Location)){
   
   df1 <- df[df$Location==country, ] %>% filter(GBIF_key > 0)
 
   keys <- unique(df1$GBIF_key)
+  keys <- as.numeric(keys)
   if(country=="Spain"){
     con = "ES"
   } else if(country=="Portugal"){
@@ -38,9 +39,9 @@ for(country in unique(df$Location)){
     pred("occurrenceStatus","PRESENT"),
     pred_not(pred_in("basisOfRecord",c("FOSSIL_SPECIMEN"))),
     pred("hasCoordinate", TRUE),
-    user = "ismaelsoto",
-    pwd = "******",
-    email = "isma-sa@hotmail.com"
+    user = "***",
+    pwd = "*******",
+    email = "***@****"
   )
     status <- occ_download_meta(x)$status
     
@@ -59,31 +60,17 @@ for(country in unique(df$Location)){
       occ_download_import() 
     }
 
-
-# spocc  -----
-install.packages("terra", dependencies = TRUE)
-
-install.packages("spocc", dependencies = TRUE)
-install.packages("remotes")
-remotes::install_github("ropensci/spocc")
-library("spocc")
-
-cawr<-'Campylorhynchus brunneicapillus' ##California cactus wren
-cawr_obs<-occ(query = cawr, from=c('inat','ebird','vertnet','idigbio','obis'), limit = 50000, has_coords = TRUE)
-obs<-occ2df(cawr_obs)
+getwd()
 
 
 
+### read GBIF downloads  -----
+setwd("/home/ismael-soto/Desktop/ELZA/Iberia/Database")
 
-
-
-
-
-# read GBIF downloads
 files <- list.files(pattern = ".zip")
 target_file <- "occurrence.txt"
 res<- data.frame()
-i <- files[1]
+i <- files[4]
 
 for(i in files){
   cat(i)
@@ -97,7 +84,6 @@ for(i in files){
         select = c("species","acceptedTaxonKey","year", "occurrenceStatus","basisOfRecord","hasCoordinate",
                    "decimalLatitude", "decimalLongitude",
               "coordinateUncertaintyInMeters","coordinatePrecision","countryCode"))
-
     
     cols_need <- c("species","acceptedTaxonKey","year", "occurrenceStatus","basisOfRecord","hasCoordinate","decimalLatitude", "decimalLongitude",
                    "coordinateUncertaintyInMeters","coordinatePrecision","countryCode")
@@ -110,12 +96,40 @@ for(i in files){
     
     occurrence_data1$name <- i
     code =unique(occurrence_data1$countryCode)
+print(code)
 
-    saveRDS(occurrence_data1, paste0('Iberia_', code,'.rds') )
+if(!code %in% c("AD","GI")){ # Andorra and Gibraltar just check zero, equal
+flags<- CoordinateCleaner::clean_coordinates(x = occurrence_data1,
+                                             lon = "decimalLongitude",
+                                             lat = "decimalLatitude",
+                                             countries = "countryCode",
+                                             species = "species",
+                                             tests = c("capitals", "centroids", "equal","gbif",
+                                                       "zeros")) 
+
+occurrence_data1 <- occurrence_data1[flags$.summary,]
+}
+
+saveRDS(occurrence_data1, paste0('Iberia_', code,'.rds') )
     
   }, error = function(e) {
-    print(paste("F en el chat:", i, "Error:", e$message))
+    print(paste("F en el chat:", i, "Erro:", e$message))
   })
 }
 
 
+
+
+
+
+# spocc  -----
+install.packages("terra", dependencies = TRUE)
+
+install.packages("spocc", dependencies = TRUE)
+install.packages("remotes")
+remotes::install_github("ropensci/spocc")
+library("spocc")
+
+cawr<-'Campylorhynchus brunneicapillus' ##California cactus wren
+cawr_obs<-occ(query = cawr, from=c('inat','ebird','vertnet','idigbio','obis'), limit = 50000, has_coords = TRUE)
+obs<-occ2df(cawr_obs)

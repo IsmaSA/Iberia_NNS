@@ -4,7 +4,7 @@
 # Ismael Soto --- University of South Bohemia in Ceske Budejovice (USB)
 Sys.time()
 
-pacman::p_load(sf,dplyr,tidyr,xlsx,writexl,readxl,sp, ggplot2,terra,raster, rnaturalearth,rnaturalearthdata, readr,rgbif)
+pacman::p_load(sf,dplyr,tidyr,xlsx,writexl,readxl,sp, ggplot2,stringr,terra,raster,stringr, rnaturalearth,rnaturalearthdata, readr,rgbif)
 
 ### Create the basic folders 
 folders = c('Database', 'Codes', 'Plots')
@@ -189,8 +189,16 @@ webshot2::webshot(
 
 
 ### Habitats -----
-library(stringr)
 unique(df$Habitat)
+
+df$Habitat[df$Habitat =='MARINE|MARINE'] = 'MARINE'
+df$Habitat[df$Habitat =='FRESHWATER-MARINE'] = 'FRESHWATER|MARINE'
+df$Habitat[df$Habitat =='FRESHWATER MARINE'] = 'FRESHWATER|MARINE'
+df$Habitat[df$Habitat =='FRESHWATER|MARINE|MARINE'] = 'FRESHWATER|MARINE'
+df$Habitat[df$Habitat =='TERRESTRIAL|FRESHWATER|MARINE|MARINE'] = 'TERRESTRIAL|FRESHWATER|MARINE'
+unique(df$Habitat)
+
+
 df.hab <- df %>%
   mutate(Habitat = str_replace_all(Habitat, "\\s+", ""), 
          Habitat = str_replace_all(Habitat, "-", "|"),
@@ -198,9 +206,90 @@ df.hab <- df %>%
 unique(df.hab$Habitat)
 
 df.hab <- df.hab %>% separate_rows(Habitat, sep = "\\|") %>%  filter(Habitat != "")  
+df.hab <- df.hab[!df.hab$Habitat=='HOST', ] 
 unique(df.hab$Habitat)
+table(df.hab$Habitat)
+
+df.hab <- df.hab %>% group_by(Location, Habitat) %>% summarise(n = n())
+str(df.hab)
+
+df.hab.text <- df.hab %>% group_by(Location, Habitat) %>% summarise(n = n())
 
 
+### Figure 2: -----
+country = unique(df.hab$Location)
+c = 'Gibraltar'
+col <- c("FRESHWATER" = "#0d7ff1", "MARINE" = "#2616bb", 
+         "TERRESTRIAL" = "#af9b26")
+plots= list()
+for(c in country) {
+  df.hab1 <- df.hab[df.hab$Location ==c, ]
+
+  shape <- ne_states(returnclass = "sf")
+  shape <- shape[shape$admin == c, ]
+  
+  if(c =="Spain"){
+  shape <- shape[!shape$name %in% c("Ceuta","Melilla","Santa Cruz de Tenerife","Las Palmas","Baleares") ,  ]
+  } else if(c =="Portugal"){
+    shape <- shape[!shape$name %in% c("Azores","Madeira") ,  ]
+  } 
+  
+  #shape <- ne_countries(scale = "medium", country = c, returnclass = "sf")
+  shape <- st_transform(shape, crs = st_crs(4326))
+  plot(shape)
+  
+  combined_geometry <- st_union(shape)
+  combined_shape <- st_sf(geometry = st_sfc(combined_geometry), crs = st_crs(shape))
+  plot(combined_shape, col = NA, border = "black")
+  
+  
+  # if (c == "Spain") {
+  #  mainland_bbox <- st_bbox(c(xmin = -9.5, ymin = 35.0, xmax = 3.3, ymax = 44.0), crs = st_crs(shape))
+  #  shape <- st_crop(shape, mainland_bbox)
+  #} else if (c == "Portugal") {
+  #  mainland_bbox <- st_bbox(c(xmin = -9.5, ymin = 36.5, xmax = -6.2, ymax = 42.2), crs = st_crs(shape))
+  # shape <- st_crop(shape, mainland_bbox)
+  #}
+  
+  if(c=="Spain"){
+    size= 0.5
+  } else if(c=="Portugal"){ size= 0.4}else if(c=="Andorra"){ 
+    size= 0.05}else if(c=="Gibraltar"){ 
+      size= 0.005}
+  
+  grid <- st_make_grid(combined_shape, cellsize = size,  square = TRUE)
+  grid_sf <- st_as_sf(grid)
+  grid_sf <- grid_sf[st_intersects(grid_sf, combined_shape, sparse = FALSE), ]
+
+  plot(grid_sf)
+  grid_sf <- grid_sf %>%  mutate(grid_id = 1:n())
+  
+  total_grids <- nrow(grid_sf)
+  df.hab1$proportion <- df.hab1$n / sum(df.hab1$n)
+  df.hab1$grid_count <- round(df.hab1$proportion * total_grids)
+  df.hab1$grid_count[which.max(df.hab1$grid_count)] <- 
+    total_grids - sum(df.hab1$grid_count[-which.max(df.hab1$grid_count)])
+  
+  categories <- unlist(mapply(rep, df.hab1$Habitat, df.hab1$grid_count))
+  grid_sf$Habitat <- categories
+  
+  p1<- ggplot() +
+    geom_sf(data = combined_shape, fill = NA, color = "black") +  
+    geom_sf(data = grid_sf, aes(fill = Habitat), color = "black") +
+    scale_fill_manual(values = col) + 
+    theme_void() +
+    labs(fill = "Habitat") +
+    theme(
+      legend.position = "right",
+      legend.text = element_text(size = 10),
+      legend.title = element_text(size = 12)  )
+  p1
+  plots[[c]] =p1
+  }
+
+(plots[["Spain"]] + plots[["Portugal"]]) / 
+  (plots[["Andorra"]] + plots[["Gibraltar"]]) + 
+  plot_layout(heights = c(2, 1)) 
 
 
 ### Pathways of introduction -----
@@ -216,7 +305,7 @@ table(df1$Pathway_refined)
 
 a= df1 %>% group_by(Location,Pathway_refined) %>% summarise(Species= n_distinct(New_names)) %>% arrange(-Species)
 
-### Figure 2: -----
+### Figure 3: -----
 pacman::p_load(ggalluvial, ggrepel, patchwork)
 group_colors <- c(
   "Algae" = "#913003", "Amphibians" = "#7bc810", "Birds" = "#dae93d",
