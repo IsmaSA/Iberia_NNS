@@ -120,11 +120,8 @@ saveRDS(occurrence_data1, paste0('Iberia_', code,'.rds') )
 
 
 
-
-
 # spocc  -----
 install.packages("terra", dependencies = TRUE)
-
 install.packages("spocc", dependencies = TRUE)
 install.packages("remotes")
 remotes::install_github("ropensci/spocc")

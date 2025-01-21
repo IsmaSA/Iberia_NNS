@@ -4,7 +4,7 @@
 # Ismael Soto --- University of South Bohemia in Ceske Budejovice (USB)
 Sys.time()
 
-pacman::p_load(sf,dplyr,tidyr,xlsx,writexl,readxl,sp, ggplot2,stringr,terra,raster,stringr, rnaturalearth,rnaturalearthdata, readr,rgbif)
+pacman::p_load(geodata, sf,dplyr,tidyr,xlsx,writexl,readxl,sp, ggplot2,stringr,terra,raster,stringr, rnaturalearth,rnaturalearthdata, readr,rgbif)
 
 ### Create the basic folders 
 folders = c('Database', 'Codes', 'Plots')
@@ -470,3 +470,101 @@ p2= ggplot(res_cum, aes(x = year, y = cumulative_records, color = ISO3, group = 
 
 library(patchwork)
 p1+p2
+
+
+### Spatial GBIF  -----
+
+# The extraction occ are running in the FROV PC (see GBIF.FROV.r)
+
+files = list.files(path = "./Database",  pattern = "Iberia_")
+f= files[4]
+
+marine <- st_read("./World_EEZ_v12_20231025/eez_v12.shp")
+cities <- read_xlsx("worldcities.xlsx")
+cities1 <- cities %>% filter(country %in% c("Andorra", "Gibraltar","Spain","Portugal")) %>%
+  filter(capital %in% c("primary","admin")) %>% filter(!admin_name %in% c("Balearic Islands","Canary Islands","Azores","Funchal","Madeira"))
+
+con <- "Portugal"
+
+for(con in c("Spain", "Portugal", "Gibraltar", "Andorra")){
+  
+if(con=="Spain"){
+    
+points <- read_rds(paste0("./Database/Iberia_ES.rds") )
+code  <- "ESP"
+  } else if(con=="Portugal"){
+points <- read_rds(paste0("./Database/Iberia_PT.rds") )
+code  <- "PT"
+
+  }else if(con=="Gibraltar"){
+points <- read_rds(paste0("./Database/Iberia_GI.rds") )
+
+  }else if(con=="Andorra"){
+points <- read_rds(paste0("./Database/Iberia_AD.rds") )
+code  <- "AND"
+  }
+  
+  print(paste0("Points: ", nrow(points)) )
+
+  points_sf <- st_as_sf(points, coords = c("decimalLongitude", "decimalLatitude"), crs = 4326)
+
+  if (con=="Gibraltar") {
+    world_states <- ne_states(returnclass = "sf")
+    countries <- world_states[world_states$name == "Gibraltar", ]
+  } else{
+  countries<- geodata::gadm(
+    country = c(code),level = 1, path = getwd() ) %>%
+    sf::st_as_sf() %>%
+    sf::st_cast("MULTIPOLYGON") %>%  st_transform(crs = st_crs(points_sf)) %>% 
+    filter(!NAME_1 %in% c("Islas Baleares","Islas Canarias", "Ceuta y Melilla", "Azores", "Madeira"))
+  }
+
+  if(con !="Andorra"){
+    mar <- marine %>% filter(TERRITORY1 ==con)
+    mar <- st_transform(mar, crs = st_crs(countries))
+  }
+  
+  countries_geom <- st_geometry(countries)
+  
+  if(con !="Andorra"){
+  mar_geom <- st_geometry(mar)
+  countries_geom <- st_sf(geometry = c(countries_geom, mar_geom))
+  }
+  
+  cities2 <- cities1 %>% filter(country ==con) %>%
+    st_as_sf(coords = c("lng", "lat"), crs = st_crs(countries_geom))
+  
+  plot(st_geometry(countries_geom))
+  
+  cat("points & countries shapefile for:", con)
+  
+ grid <- st_make_grid(countries_geom, cellsize = 0.05, square = TRUE) 
+ grid_sf <- st_as_sf(grid, crs = st_crs(points_sf)) %>% mutate(grid_id = row_number())
+
+ points_with_grid <- st_join(points_sf, grid_sf, join = st_within)
+
+ species_count <- points_with_grid %>%
+    group_by(grid_id) %>%
+    summarise(species_count = n_distinct(species)) %>% 
+    ungroup()
+species_count <- st_transform(species_count, st_crs(grid_sf))
+
+grid_with_species <- grid_sf %>%
+  st_join(species_count) %>%  
+  mutate(species_count = ifelse(is.na(species_count) | species_count == 0, NA, species_count))
+
+
+ggplot() +
+    geom_sf(data = grid_with_species, aes(fill = species_count), color =NA, size = 0.2) +
+    geom_sf(data = countries_geom, fill = NA, color = "black", size = 0.5)+
+    scale_fill_gradientn(
+      colors = c("#FFFF00", "#FFEA00", "#FFA500", "#FF7F00", "#FF0000"), 
+      values = scales::rescale(c(0, 0.33, 0.66, 1)),  
+      na.value = "transparent",
+      guide = guide_colorbar(
+        barwidth = 1, barheight = 10, title.position = "top", title.hjust = 0.5 )
+    )  + theme_void() +  labs(fill = "Density") +
+  geom_sf(data = cities2, color = "black", size = 1.5) + 
+  geom_sf_text(data = cities2, aes(label = city), color = "black", size = 3, fontface = "bold", nudge_y = 0.008) 
+
+}

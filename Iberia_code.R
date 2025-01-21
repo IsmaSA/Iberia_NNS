@@ -373,10 +373,10 @@ cities2 <- cities1 %>% filter(admin_name ==con) %>%
   )
   
   density_raster <- rasterize(
-    points_sf,   # SpatialPoints data
-    density_raster,    # New raster template
-    fun = "count",     # Counts points in each cell
-    background = 0     # Sets cells without points to 0
+    points_sf,   
+    density_raster,   
+    fun = "count",     
+    background = 0     
   )
   
   density_raster[density_raster == 0] <- NA
@@ -454,20 +454,20 @@ p1 = ggplot() +
   scale_fill_gradientn(
     colors = c("#FFFF00", "#FFEA00", "#FFA500", "#FF7F00", "#FF0000"), 
     values = scales::rescale(c(0, 0.1, 0.2, 0.4, 0.6, 0.8, 1)),  
-    trans = "log",  # Log scale for color contrast
-    labels = scales::label_number(accuracy = 1),  # Round off legend labels
-    na.value = "transparent",  # Handle NA values
+    trans = "log", 
+    labels = scales::label_number(accuracy = 1), 
+    na.value = "transparent",  
     guide = guide_colorbar(
-      barwidth = 0.5, barheight = 15,  # Slimmer, longer color bar for elegance
-      title.position = "top", title.hjust = 0.5,  # Center title on color bar
-      frame.colour = "black", frame.linewidth = 0.5  # Frame the color bar
+      barwidth = 0.5, barheight = 15, 
+      title.position = "top", title.hjust = 0.5, 
+      frame.colour = "black", frame.linewidth = 0.5 
     )) +
   theme_void() +
   theme(
-    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),  # Centralized, bold title
-    legend.position = "right",  # Move legend to right for better visibility
-    legend.title = element_text(size = 12, face = "bold"),  # Bold legend title for emphasis
-    legend.text = element_text(size = 10)  # Adjust legend text size for readability
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),  
+    legend.position = "right",  
+    legend.title = element_text(size = 12, face = "bold"),
+    legend.text = element_text(size = 10) 
   ) +
   labs(fill = "Density GBIF occ") +
   geom_sf(data = cities2, color = "black", size = 1.5) +  
