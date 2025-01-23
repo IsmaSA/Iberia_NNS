@@ -475,96 +475,383 @@ p1+p2
 ### Spatial GBIF  -----
 
 # The extraction occ are running in the FROV PC (see GBIF.FROV.r)
+### Spatial GBIF  -----
 
-files = list.files(path = "./Database",  pattern = "Iberia_")
+# The extraction occ are running in the FROV PC (see GBIF.FROV.r)
+
+files = list.files(path = "./Database",  pattern = "Iberia_") 
 f= files[4]
 
 marine <- st_read("./World_EEZ_v12_20231025/eez_v12.shp")
 cities <- read_xlsx("worldcities.xlsx")
 cities1 <- cities %>% filter(country %in% c("Andorra", "Gibraltar","Spain","Portugal")) %>%
-  filter(capital %in% c("primary","admin")) %>% filter(!admin_name %in% c("Balearic Islands","Canary Islands","Azores","Funchal","Madeira"))
+  filter(capital %in% c("primary")) %>% filter(!admin_name %in% c("Balearic Islands","Canary Islands","Azores","Funchal","Madeira"))
 
-con <- "Portugal"
-
-for(con in c("Spain", "Portugal", "Gibraltar", "Andorra")){
-  
-if(con=="Spain"){
-    
 points <- read_rds(paste0("./Database/Iberia_ES.rds") )
-code  <- "ESP"
-  } else if(con=="Portugal"){
-points <- read_rds(paste0("./Database/Iberia_PT.rds") )
-code  <- "PT"
+points1 <- read_rds(paste0("./Database/Iberia_PT.rds") )
 
-  }else if(con=="Gibraltar"){
-points <- read_rds(paste0("./Database/Iberia_GI.rds") )
+ib = rbind(points,points1)
 
-  }else if(con=="Andorra"){
+points_sf <- st_as_sf(ib, coords = c("decimalLongitude", "decimalLatitude"), crs = 4326)
+
+countries<- geodata::gadm(
+  country = c("ESP","PT"),level = 1, path = getwd() ) %>%
+  sf::st_as_sf() %>%
+  sf::st_cast("MULTIPOLYGON") %>%  st_transform(crs = st_crs(points_sf)) %>% 
+  filter(!NAME_1 %in% c("Islas Baleares","Islas Canarias", "Ceuta y Melilla", "Azores", "Madeira"))
+
+mar <- marine %>% filter(TERRITORY1 %in% c("Spain","Portugal"))
+mar <- st_transform(mar, crs = st_crs(countries))
+
+countries_geom <- st_geometry(countries)
+
+mar_geom <- st_geometry(mar)
+countries_geom <- st_sf(geometry = c(countries_geom, mar_geom))
+
+cities2 <- cities1 %>% filter(country %in% c("Spain","Portugal")) %>%
+  st_as_sf(coords = c("lng", "lat"), crs = st_crs(countries_geom))
+
+plot(st_geometry(countries_geom))
+
+points_main <- as_Spatial(points_sf$geometry)
+
+point_extent <- extent(points_main)  
+buffer <- 0.01  
+
+density_raster <- raster(
+  xmn = xmin(point_extent) - buffer, 
+  xmx = xmax(point_extent) + buffer, 
+  ymn = ymin(point_extent) - buffer, 
+  ymx = ymax(point_extent) + buffer, 
+  resolution = 0.045045,  # Set finer resolution to capture point density
+  crs = "+proj=longlat +datum=WGS84")
+
+density_raster <- rasterize(
+  points_sf,   # SpatialPoints data
+  density_raster,    # New raster template
+  fun = "count",     # Counts points in each cell
+  background = 0     # Sets cells without points to 0
+)
+
+density_raster[density_raster == 0] <- NA
+
+density_df <- as.data.frame(density_raster, xy = TRUE)
+names(density_df)
+density_df = density_df[,c(1,2,13)]
+colnames(density_df) <- c("longitude", "latitude", "density")
+
+raster_points <- rasterToPoints(density_raster)
+
+df <- as.data.frame(raster_points)
+names(df) <- c("longitude", "latitude", "value")
+
+library(scales)
+countries_geom <- sf::st_simplify(countries_geom, preserveTopology = TRUE, dTolerance = 1000)
+
+ggplot() +xlim(-10, 5.6) + ylim(35, 45) +
+geom_segment(data = df,aes(x = longitude, y = latitude,
+            xend = longitude,
+          yend = latitude + (value/max(value, na.rm = TRUE)) * 2,
+          color = value),
+    alpha = 0.8,
+   size = 0.5) + # color_palette+ 
+  scale_color_viridis_c(option = "C", direction = 1, end = 0.9,  # Customize the viridis options as needed
+                        name = "Number of GBIF occurrences",
+                        breaks = c(0, 2500, 5000, 7500, 10000,12000,15000)) +
+ geom_sf(data = countries_geom, color = "black", fill = "NA") + 
+ theme_void()+
+  theme(
+    legend.position = "right",           # Keep legend on the right
+    legend.title = element_text(size = 8),  # Smaller title
+    legend.text = element_text(size = 6),   # Smaller text
+    legend.key.size = unit(0.4, "cm")       # Smaller legend key boxes
+  )+ 
+  geom_sf(data = cities2, color = "red", size = 1) +  
+  geom_sf_text(data = cities2, aes(label = city), color = "red", size = 3, fontface = "bold", nudge_y = -0.2) 
+
+ggsave(last_plot(), device = "svg", filename="a.svg", dpi =10)
+
+
+## Andorra
 points <- read_rds(paste0("./Database/Iberia_AD.rds") )
-code  <- "AND"
+points_sf <- st_as_sf(points, coords = c("decimalLongitude", "decimalLatitude"), crs = 4326)
+
+countries<- geodata::gadm(
+  country = c("AND"),level = 1, path = getwd() ) %>%
+  sf::st_as_sf() %>%
+  sf::st_cast("MULTIPOLYGON") %>%  st_transform(crs = st_crs(points_sf)) %>% 
+  filter(!NAME_1 %in% c("Islas Baleares","Islas Canarias", "Ceuta y Melilla", "Azores", "Madeira"))
+
+countries_geom <- st_geometry(countries)
+countries_geom <- st_sf(geometry = c(countries_geom))
+
+cities2 <- cities1 %>% filter(country %in% c("Andorra")) %>%
+  st_as_sf(coords = c("lng", "lat"), crs = st_crs(countries_geom))
+
+plot(st_geometry(countries_geom))
+
+points_main <- as_Spatial(points_sf$geometry)
+point_extent <- extent(points_main)  
+buffer <- 0.01  
+
+density_raster <- raster(
+  xmn = xmin(point_extent) - buffer, 
+  xmx = xmax(point_extent) + buffer, 
+  ymn = ymin(point_extent) - buffer, 
+  ymx = ymax(point_extent) + buffer, 
+  resolution = 0.005,  # Set finer resolution to capture point density
+  crs = "+proj=longlat +datum=WGS84")
+
+density_raster <- rasterize(
+  points_sf,   # SpatialPoints data
+  density_raster,    # New raster template
+  fun = "count",     # Counts points in each cell
+  background = 0     # Sets cells without points to 0
+)
+
+density_raster[density_raster == 0] <- NA
+density_df <- as.data.frame(density_raster, xy = TRUE)
+names(density_df)
+density_df = density_df[,c(1,2,13)]
+colnames(density_df) <- c("longitude", "latitude", "density")
+
+raster_points <- rasterToPoints(density_raster)
+df <- as.data.frame(raster_points)
+names(df) <- c("longitude", "latitude", "value")
+
+#library(scales)
+ggplot() +#xlim(1.4, 1.8) + ylim(42.4, 42.7) +
+  geom_segment(data = df,aes(x = longitude, y = latitude,
+                             xend = longitude,
+                             yend = latitude + (value/max(value, na.rm = TRUE)) * 0.1,
+                             color = value),
+               alpha = 0.8,
+               size = 0.5) + # color_palette+ 
+  scale_color_viridis_c(option = "C", direction = 1, end = 0.9,  # Customize the viridis options as needed
+                        name = "Number of GBIF occurrences",
+                        breaks = c(0, 2500, 5000, 7500, 10000,12000,15000)) +
+  geom_sf(data = countries_geom, color = "black", fill = "NA") + 
+  theme_void()+
+  geom_sf(data = cities2, color = "red", size = 1) +  
+  geom_sf_text(data = cities2, aes(label = city), color = "red", size = 3, fontface = "bold", nudge_y = 0.009) 
+
+ggsave(last_plot(), device = "svg", filename="b.svg", dpi =300)
+
+
+## Gibraltar
+points <- read_rds(paste0("./Database/Iberia_GI.rds") )
+points_sf <- st_as_sf(points, coords = c("decimalLongitude", "decimalLatitude"), crs = 4326)
+
+world_states <- ne_states(returnclass = "sf")
+countries <- world_states[world_states$name == "Gibraltar", ]
+
+mar <- marine %>% filter(TERRITORY1 %in% c("Gibraltar"))
+mar <- st_transform(mar, crs = st_crs(countries))
+
+countries_geom <- st_geometry(countries)
+
+mar_geom <- st_geometry(mar)
+countries_geom <- st_sf(geometry = c(countries_geom, mar_geom))
+
+cities2 <- cities1 %>% filter(country %in% c("Gibraltar")) %>%
+  st_as_sf(coords = c("lng", "lat"), crs = st_crs(countries_geom))
+
+plot(st_geometry(countries_geom))
+
+points_main <- as_Spatial(points_sf$geometry)
+point_extent <- extent(points_main)  
+buffer <- 0.01  
+
+density_raster <- raster(
+  xmn = xmin(point_extent) - buffer, 
+  xmx = xmax(point_extent) + buffer, 
+  ymn = ymin(point_extent) - buffer, 
+  ymx = ymax(point_extent) + buffer, 
+  resolution = 0.005,  # Set finer resolution to capture point density
+  crs = "+proj=longlat +datum=WGS84")
+
+density_raster <- rasterize(
+  points_sf,   # SpatialPoints data
+  density_raster,    # New raster template
+  fun = "count",     # Counts points in each cell
+  background = 0     # Sets cells without points to 0
+)
+
+density_raster[density_raster == 0] <- NA
+density_df <- as.data.frame(density_raster, xy = TRUE)
+names(density_df)
+density_df = density_df[,c(1,2,13)]
+colnames(density_df) <- c("longitude", "latitude", "density")
+
+raster_points <- rasterToPoints(density_raster)
+df <- as.data.frame(raster_points)
+names(df) <- c("longitude", "latitude", "value")
+
+#library(scales)
+ggplot() +#xlim(1.4, 1.8) + ylim(42.4, 42.7) +
+  geom_segment(data = df,aes(x = longitude, y = latitude,
+                             xend = longitude,
+                             yend = latitude + (value/max(value, na.rm = TRUE)) * 0.1,
+                             color = value),
+               alpha = 0.8,
+               size = 0.5) + # color_palette+ 
+  scale_color_viridis_c(option = "C", direction = 1, end = 0.9,  # Customize the viridis options as needed
+                        name = "Number of GBIF occurrences",
+                        breaks = c(0, 2500, 5000, 7500, 10000,12000,15000)) +
+  geom_sf(data = countries_geom, color = "black", fill = "NA") + 
+  theme_void()+
+  geom_sf(data = cities2, color = "red", size = 1) +  
+  geom_sf_text(data = cities2, aes(label = city), color = "red", size = 3, fontface = "bold", nudge_y = 0.009) 
+
+ggsave(last_plot(), device = "svg", filename="c.svg", dpi =300)
+
+
+#  b) Species per administratitve area
+
+marine <- st_read("./World_EEZ_v12_20231025/eez_v12.shp")
+cities <- read_xlsx("worldcities.xlsx")
+cities1 <- cities %>% filter(country %in% c("Andorra", "Gibraltar","Spain","Portugal")) %>%
+  filter(capital %in% c("primary","admin")) %>% filter(!admin_name %in% c("Canary Islands","Azores"))
+
+con <- "Iberia"
+
+for(con in c("Iberia", "Gibraltar", "Andorra")){
+  
+  if(con=="Iberia"){
+    points <- read_rds("./Database/Iberia_ES.rds")
+    points1 <- read_rds("./Database/Iberia_PT.rds")
+    code  <- c("PT", "ESP")
+    points = rbind(points,points1)
+  } else if(con=="Gibraltar"){
+    points <- read_rds("./Database/Iberia_GI.rds")
+    
+  }else if(con=="Andorra"){
+    points <- read_rds("./Database/Iberia_AD.rds")
+    code  <- "AND"
   }
   
-  print(paste0("Points: ", nrow(points)) )
-
   points_sf <- st_as_sf(points, coords = c("decimalLongitude", "decimalLatitude"), crs = 4326)
-
+  
   if (con=="Gibraltar") {
     world_states <- ne_states(returnclass = "sf")
     countries <- world_states[world_states$name == "Gibraltar", ]
   } else{
-  countries<- geodata::gadm(
-    country = c(code),level = 1, path = getwd() ) %>%
-    sf::st_as_sf() %>%
-    sf::st_cast("MULTIPOLYGON") %>%  st_transform(crs = st_crs(points_sf)) %>% 
-    filter(!NAME_1 %in% c("Islas Baleares","Islas Canarias", "Ceuta y Melilla", "Azores", "Madeira"))
-  }
-
-  if(con !="Andorra"){
-    mar <- marine %>% filter(TERRITORY1 ==con)
-    mar <- st_transform(mar, crs = st_crs(countries))
+    countries<- geodata::gadm(
+      country = c(code),level = 1, path = getwd() ) %>%
+      sf::st_as_sf() %>%
+      sf::st_cast("MULTIPOLYGON") %>%  st_transform(crs = st_crs(points_sf)) %>% 
+      filter(!NAME_1 %in% c("Islas Baleares","Islas Canarias", "Ceuta y Melilla", "Azores", "Madeira"))
   }
   
   countries_geom <- st_geometry(countries)
-  
-  if(con !="Andorra"){
-  mar_geom <- st_geometry(mar)
-  countries_geom <- st_sf(geometry = c(countries_geom, mar_geom))
-  }
-  
-  cities2 <- cities1 %>% filter(country ==con) %>%
-    st_as_sf(coords = c("lng", "lat"), crs = st_crs(countries_geom))
-  
   plot(st_geometry(countries_geom))
   
   cat("points & countries shapefile for:", con)
   
- grid <- st_make_grid(countries_geom, cellsize = 0.05, square = TRUE) 
- grid_sf <- st_as_sf(grid, crs = st_crs(points_sf)) %>% mutate(grid_id = row_number())
+  if(con =="Iberia"){
+    cities2 <- cities1 %>% filter(iso2 %in% c("ES","PT")) %>%
+      st_as_sf(coords = c("lng", "lat"), crs = st_crs(countries_geom))
+  } else if(con =="Andorra"){
+    cities2 <- cities1 %>% filter(iso3 %in% c("AND")) %>%
+      st_as_sf(coords = c("lng", "lat"), crs = st_crs(countries_geom))
+  }else if(con =="Gibraltar"){
+    cities2 <- cities1 %>% filter(iso2 %in% c("GI")) %>%
+      st_as_sf(coords = c("lng", "lat"), crs = st_crs(countries_geom))
+  }
+  
+  if(con == "Andorra"){
+  points_joined <- st_join(points_sf, countries)
+  species_counts <- points_joined %>%
+    group_by(NAME_1) %>%
+    summarise(species_count = n_distinct(species)) %>%
+    st_drop_geometry()  
+  
+  combined_data <- countries %>%
+    left_join(species_counts, by = "NAME_1")
+  }
+  
 
- points_with_grid <- st_join(points_sf, grid_sf, join = st_within)
+  if(con =="Iberia"){
+    countries_geom <- countries_geom %>% st_cast("MULTIPOLYGON")
+    mar <- marine %>% filter(TERRITORY1 %in% c("Spain", "Portugal"))
+    mar <- st_transform(mar, crs = st_crs(countries))
+    mar <- mar %>% st_cast("POLYGON")
+  } else if(con =="Gibraltar"){ 
+    mar <- marine %>% filter(TERRITORY1 %in% c("Gibraltar"))
+    mar <- st_transform(mar, crs = st_crs(countries))
+    }
+  
+  if(con !="Andorra"){
+    mar_geom <- st_geometry(mar)
+    mar_geom <- st_cast(mar, "MULTIPOLYGON") %>% st_geometry()
+    countries_geom <- st_sf(geometry = c(st_geometry(countries_geom), mar_geom))
+  }
+  
+  plot(st_geometry(countries_geom))
+  
+  cat("points & countries shapefile for:", con)
 
- species_count <- points_with_grid %>%
-    group_by(grid_id) %>%
-    summarise(species_count = n_distinct(species)) %>% 
-    ungroup()
-species_count <- st_transform(species_count, st_crs(grid_sf))
-
-grid_with_species <- grid_sf %>%
-  st_join(species_count) %>%  
-  mutate(species_count = ifelse(is.na(species_count) | species_count == 0, NA, species_count))
-
-
-ggplot() +
-    geom_sf(data = grid_with_species, aes(fill = species_count), color =NA, size = 0.2) +
-    geom_sf(data = countries_geom, fill = NA, color = "black", size = 0.5)+
-    scale_fill_gradientn(
-      colors = c("#FFFF00", "#FFEA00", "#FFA500", "#FF7F00", "#FF0000"), 
-      values = scales::rescale(c(0, 0.33, 0.66, 1)),  
-      na.value = "transparent",
-      guide = guide_colorbar(
-        barwidth = 1, barheight = 10, title.position = "top", title.hjust = 0.5 )
-    )  + theme_void() +  labs(fill = "Density") +
-  geom_sf(data = cities2, color = "black", size = 1.5) + 
-  geom_sf_text(data = cities2, aes(label = city), color = "black", size = 3, fontface = "bold", nudge_y = 0.008) 
-
+  if(con=="Gibraltar"){
+  countries_geom <- countries_geom %>%filter(!st_is_empty(geometry)) %>% mutate(ID = row_number()) 
+  points_joined <- st_join(points_sf, countries_geom)
+  species_counts <- points_joined %>%
+    group_by(ID) %>%
+    summarise(species_count = n_distinct(species)) %>%
+    st_drop_geometry()  
+  
+  combined_data <- countries_geom %>%
+    left_join(species_counts, by = "ID")
+  }
+  
+  if(con=="Andorra"){
+    combined_shapefile = countries
+    joined_data <- st_join(points_sf, combined_shapefile)
+    species_count <- joined_data %>%
+      group_by(NAME_1) %>%
+      summarise(
+        species_count = n_distinct(species), # Count unique species
+        geometry = st_union(geometry)       # Combine geometries for each NAME_1
+      ) %>%
+      st_as_sf()
+  }
+  
+  if(con=="Iberia"){
+    countries_geom <- countries_geom %>%filter(!st_is_empty(geometry)) %>% mutate(ID = row_number()) 
+    points_joined <- st_join(points_sf, countries_geom)
+    species_counts <- points_joined %>%
+      group_by(ID) %>%
+      summarise(species_count = n_distinct(species)) %>%
+      st_drop_geometry()  
+    
+    combined_data <- countries_geom %>%
+      left_join(species_counts, by = "ID")
+  }
+  
+  #points_main <- as_Spatial(points_sf$geometry)
+  color_palette <-c("#FFFF00", "#FFEA00", "#FFA500", "#FF7F00", "#FF0000")
+  cities2 <- cities2 %>% filter(!city =='Funchal')
+  
+  p1=ggplot(data = combined_data) +
+    geom_sf(aes(fill = species_count), color = "black") +
+    #  scale_fill_gradientn(
+    # colors = color_palette,
+    # name = "Number of Species"
+    #) +
+    scale_fill_viridis_c(option = "C", direction = 1, end = 0.9,  # Customize the viridis options as needed
+                         name = "Number of Species (based on GBIF occurrences)",
+                         breaks = seq(0, 1200, by = 200),  # Ensure evenly spaced breaks
+                         labels = seq(0, 1200, by = 200)    # Explicitly set corresponding labels
+    ) +
+    theme_void() +
+    #labs(fill = "Number of species") +
+    geom_sf(data = cities2, color = "black", size = 0.8) +  # Add city points
+    geom_sf_text(data = cities2, aes(label = city), color = "black", 
+                 size = 1.7, fontface = "bold", nudge_y = 0.3) +
+    theme(
+      legend.position = "right",
+      legend.text = element_text(size = 8),
+      legend.title = element_text(face = "bold", size = 8) )
+  
+  ggsave(filename = paste0("Sp_", con,".svg"), plot = p1,
+         width = 8, height = 6, units = "in", device = "svg")
 }
