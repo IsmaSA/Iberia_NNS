@@ -7,8 +7,8 @@ Analysis of the list of **established non-native** species in the Iberian Penins
 - **Habitats:** (Freshwater, Marine and Terrestrial)
 - **Native range:** (Paleartic, Neartic, Neotropic, Afrotropic, Indomalayan and Australasia)
 - **Pathways:** (Release, Escape, Corridor, Stowaway, Contaminant, Unaided)
-- **Spatial distibution:** (GBIF records)
 - **Temporal analysis:** (First-records)
+- **Spatial distibution:** (GBIF records)
 
 ## Abstract
 ...
@@ -23,10 +23,14 @@ Analysis of the list of **established non-native** species in the Iberian Penins
 ## Related
 
 Put here the list of other similar paper I used as source...
+-
+-
+-
+
 
 ## Feedback
 
-If you have any feedback, please reach me out at isma-sa@hotmail.com
+If you have any feedback, please send me an email to: isma-sa@hotmail.com
 
 ## Acknowledgements
 ...
