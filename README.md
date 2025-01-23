@@ -20,16 +20,20 @@ Analysis of the list of **established non-native** species in the Iberian Penins
 
 - [Ismael Soto](https://github.com/IsmaSA)
 
+## Related
+
+Put here the list of other similar paper I used as source...
 
 ## Feedback
 
 If you have any feedback, please reach me out at isma-sa@hotmail.com
 
-
 ## Acknowledgements
 ...
-
 
 ## Badges
 
 [![GPLv3 License](https://img.shields.io/badge/License-GPL%20v3-yellow.svg)](https://opensource.org/licenses/)
+
+<img src="https://www.frov.jcu.cz/images/FROV_cz.svg" alt="Logo" width="500" style="float: right; margin-center: 10px;" />
+
