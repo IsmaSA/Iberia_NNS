@@ -855,3 +855,37 @@ for(con in c("Iberia", "Gibraltar", "Andorra")){
   ggsave(filename = paste0("Sp_", con,".svg"), plot = p1,
          width = 8, height = 6, units = "in", device = "svg")
 }
+
+
+### Supplementary Figure (groups)  -----
+head(df)
+df$Group[df$Group =="Dinoflagellata"] <- "Microorganisms"
+df$Group[df$Group =="Viruses"] <- "Microorganisms"
+df$Group[df$Group =="Bacteria and protozoans"] <- "Microorganisms"
+df$Group[df$Group =="Microorganism"] <- "Microorganisms"
+df$Group[df$Group =="Microorganism"] <- "Microorganisms"
+df$Group[df$Group =="mammals"] <- "Mammals"
+df$Group[df$Group =="Invertebrates (excl. Arthropods, Molluscs)"] <- "Other invertebrates"
+df$Group[df$Group =="Arthropods p.p. (Myriapods, Diplopods etc.)"] <- "Other invertebrates"
+
+group_colors <- c(
+  "Algae" = "#913003", "Amphibians" = "#7bc810", "Birds" = "#dae93d",
+  "Bryophytes" = "#e78ac3", "Crustaceans" = "#a471ed", "Fishes" = "#8399e7",
+  "Fungi" = "#b1d634", "Insects" = "#b3b3b3", "Mammals" = "#e5c494",
+  "Microorganisms" = "#72c6b1", "Molluscs" = "#fb9a99", "Reptiles" = "#dd1a1a",
+  "Vascular plants" = "#76b379", "Other invertebrates" = "#cab2d6")
+
+df1= df %>% group_by(Location, Group) %>% summarise(n = n()) %>% mutate(
+  Location = factor(Location, levels = c("Spain", "Portugal", "Andorra", "Gibraltar")) )
+
+unique(df1$Group)
+
+ggplot(df1, aes(Group, n, fill = Group)) + geom_bar(stat = "identity",size= 0.2, color ="black")+
+  facet_wrap(vars(Location), scales = "free_y") +
+  scale_fill_manual(values = group_colors) +
+  theme_bw() +  labs(x="", y="")+scale_x_reordered() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    strip.text = element_text(face = "bold"),
+    legend.position = "none")
+
