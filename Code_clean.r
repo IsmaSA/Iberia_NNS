@@ -252,10 +252,10 @@ for(c in country) {
   #}
   
   if(c=="Spain"){
-    size= 0.5
-  } else if(c=="Portugal"){ size= 0.4}else if(c=="Andorra"){ 
-    size= 0.05}else if(c=="Gibraltar"){ 
-      size= 0.005}
+    size= 0.3
+  } else if(c=="Portugal"){ size= 0.2}else if(c=="Andorra"){ 
+    size= 0.01}else if(c=="Gibraltar"){ 
+      size= 0.001}
   
   grid <- st_make_grid(combined_shape, cellsize = size,  square = TRUE)
   grid_sf <- st_as_sf(grid)
@@ -274,8 +274,8 @@ for(c in country) {
   grid_sf$Habitat <- categories
   
   p1<- ggplot() +
-    geom_sf(data = combined_shape, fill = NA, color = "black") +  
     geom_sf(data = grid_sf, aes(fill = Habitat), color = "black") +
+    geom_sf(data = combined_shape, fill = NA, color = "black") +  
     scale_fill_manual(values = col) + 
     theme_void() +
     labs(fill = "Habitat") +
@@ -287,10 +287,11 @@ for(c in country) {
   plots[[c]] =p1
   }
 
+library(patchwork)
 (plots[["Spain"]] + plots[["Portugal"]]) / 
   (plots[["Andorra"]] + plots[["Gibraltar"]]) + 
   plot_layout(heights = c(2, 1)) 
-
+ggsave(plot= last_plot(), filename = "habitat.svg", device= "svg")
 
 ### Pathways of introduction -----
 
@@ -365,23 +366,21 @@ b <- df[df$Group=="Fishes", ]
 
 ### Temporal trends ------
 list.files()
-df = read_xlsx("All.First.records.xlsx")
-df1 <- df[df$ISO3 %in% c("ESP", "PRT", "AND","GIB"), ]
+df1 = read_xlsx("./Database/All.First.records.xlsx")
+df1 <- df1[df1$ISO3 %in% c("ESP", "PRT", "AND","GIB"), ]
 df1 <- df1[df1$Native=="FALSE", ]
 df1 <- df1[!df1$Source=="Not dated", ]
 df1 = df1 %>% filter(!is.na(df1$year))
 df1 = df1 %>% filter(year < 2024 & year >0)
+df1 <- df1[df1$usageKey %in% df$GIATAR_key, ]
 
 df1$ISO3[df1$ISO3 =="ESP"] ="Spain"
 df1$ISO3[df1$ISO3 =="AND"] ="Andorra"
 df1$ISO3[df1$ISO3 =="PRT"] ="Portugal"
 df1$ISO3[df1$ISO3 =="GIB"] ="Gibraltar"
 
-
-
 table(df1$ISO3)
 table(df1$year)
-
 
 res_anual = df1 %>% group_by(year, ISO3) %>% summarise(n=n())
 res_cum <- df1 %>%
@@ -393,12 +392,17 @@ res_anual <- res_anual %>%
   group_by(ISO3) %>%
   mutate(running_median = zoo::rollapply(n, width = 10, FUN = median, fill = NA, align = "center"))
 
+res_comb_anual <- res_anual %>% group_by(year) %>% summarise(n=sum(running_median)) %>% mutate(ISO3="comb")
+
+res_comb_cum <-  df1 %>%
+  group_by(year) %>% 
+  summarise(n = n(), .groups = "drop") %>% arrange(year) %>%  
+  mutate(cumulative_records = cumsum(n))%>% mutate(ISO3="comb")
+
 background <- data.frame(
   xmin = seq(1500, 2050, by = 50),
   xmax = seq(1550, 2100, by = 50),
-  fill = rep(c("grey70", "white"), length.out = length(seq(1500, 2050, by = 50)))
-)
-
+  fill = rep(c("grey70", "white"), length.out = length(seq(1500, 2050, by = 50))))
 
 location_colors <- c(
   "Spain" = "#ff7f00",
@@ -415,6 +419,7 @@ p1 = ggplot(res_anual, aes(x = year, y = n, color = ISO3, group = ISO3)) +
   geom_point(size = 2, alpha=0.35) + scale_fill_manual(values = c("grey70" = "lightgrey", "white" = "white"), guide = "none")+
   scale_color_manual(values = location_colors) +
   geom_line(aes(y = running_median, color = ISO3), size = 1.2, linetype = "solid") + 
+  geom_line(data = res_comb_anual, aes(y = n), color = "black", linetype = "dashed", size = 1) + 
   labs(
     x = "Year", y = "Number of first records",
     color = "Location",  fill = "Location") +
@@ -426,15 +431,15 @@ p1 = ggplot(res_anual, aes(x = year, y = n, color = ISO3, group = ISO3)) +
     plot.title = element_text(hjust = 0.5, size = 16, face = "bold")) +
   annotate("text", x = 1800, y = 20, label = "Industrial Revolution\n(1760–1840)", size = 3.5, color = "black") +
   annotate("text", x = 2014, y = 25, label = "EU Regulation\n1143/2014", size = 3.5, color = "black") +
-  annotate("text", x = 1986, y = 20, label = "Spain and Portugal\nJoin EU", size = 3.5, color = "black") +
+  annotate("text", x = 1986, y = 20, label = "Spain and Portugal\n join EU\n (1986)", size = 3.5, color = "black") +
   # Add curved arrows
-  geom_vline(xintercept = c(1800, 1986, 2014), linetype = "dashed", color = "grey50", size = 0.5, alpha=0.5) +
-  geom_curve(x = 1800, y = 19, xend = 1760, yend = 15, 
-             curvature = 0.2, arrow = arrow(length = unit(0.2, "cm")), color = "black") +
-  geom_curve(x = 2014, y = 24, xend = 2000, yend = 20, 
-             curvature = 0.2, arrow = arrow(length = unit(0.2, "cm")), color = "black") +
-  geom_curve(x = 1986, y = 19, xend = 1975, yend = 15, 
-             curvature = -0.2, arrow = arrow(length = unit(0.2, "cm")), color = "black")
+  geom_vline(xintercept = c(1800, 1986, 2014), linetype = "dashed", color = "grey50", size = 0.5, alpha=0.5) 
+  # geom_curve(x = 1800, y = 19, xend = 1760, yend = 15, 
+             #          curvature = 0.2, arrow = arrow(length = unit(0.2, "cm")), color = "black") +
+  #geom_curve(x = 2014, y = 24, xend = 2000, yend = 20, 
+             #           curvature = 0.2, arrow = arrow(length = unit(0.2, "cm")), color = "black") +
+  # geom_curve(x = 1986, y = 19, xend = 1975, yend = 15, 
+ #            curvature = -0.2, arrow = arrow(length = unit(0.2, "cm")), color = "black")
 
 p1
 
@@ -445,6 +450,7 @@ p2= ggplot(res_cum, aes(x = year, y = cumulative_records, color = ISO3, group = 
   scale_fill_manual(values = c("grey70" = "lightgrey", "white" = "white"), guide = "none") +
   scale_color_manual(values = location_colors) +
   geom_line(aes(y = cumulative_records, color = ISO3), size = 1.2, linetype = "solid") + 
+  geom_line(data = res_comb_cum, aes(y = cumulative_records), color = "black", linetype = "dashed", size = 1) + 
   labs(
     x = "Year", y = "Cumulative number of first records",
     color = "Location",  fill = "Location") +
@@ -458,27 +464,23 @@ p2= ggplot(res_cum, aes(x = year, y = cumulative_records, color = ISO3, group = 
   scale_x_continuous(breaks = c(1700,1800,1900,2000,2023), limits = c(1700, 2023))+
   annotate("text", x = 1800, y = 300, label = "Industrial Revolution\n(1760–1840)", size = 3.5, color = "black") +
   annotate("text", x = 2014, y = 300, label = "EU Regulation\n1143/2014", size = 3.5, color = "black") +
-  annotate("text", x = 1986, y = 300, label = "Spain and Portugal\nJoin EU", size = 3.5, color = "black") +
+  annotate("text", x = 1986, y = 300, label = "Spain and Portugal\njoin EU", size = 3.5, color = "black") +
   # Add curved arrows
-  geom_vline(xintercept = c(1800, 1986, 2014), linetype = "dashed", color = "grey50", size = 0.5, alpha=0.5) +
-  geom_curve(x = 1800, y = 19, xend = 1760, yend = 15, 
-             curvature = 0.2, arrow = arrow(length = unit(0.2, "cm")), color = "black") +
-  geom_curve(x = 2014, y = 24, xend = 2000, yend = 20, 
-             curvature = 0.2, arrow = arrow(length = unit(0.2, "cm")), color = "black") +
-  geom_curve(x = 1986, y = 19, xend = 1975, yend = 15, 
-             curvature = -0.2, arrow = arrow(length = unit(0.2, "cm")), color = "black")
+  geom_vline(xintercept = c(1800, 1986, 2014), linetype = "dashed", color = "grey50", size = 0.5, alpha=0.5) 
+  #  geom_curve(x = 1800, y = 19, xend = 1760, yend = 15, 
+  #        curvature = 0.2, arrow = arrow(length = unit(0.2, "cm")), color = "black") +
+  #geom_curve(x = 2014, y = 24, xend = 2000, yend = 20, 
+  #         curvature = 0.2, arrow = arrow(length = unit(0.2, "cm")), color = "black") +
+  #geom_curve(x = 1986, y = 19, xend = 1975, yend = 15, 
+  #          curvature = -0.2, arrow = arrow(length = unit(0.2, "cm")), color = "black")
 
 library(patchwork)
 p1+p2
-
+ggsave(plot=last_plot(), filename = "temporal.svg", device = "svg")
 
 ### Spatial GBIF  -----
-
 # The extraction occ are running in the FROV PC (see GBIF.FROV.r)
-### Spatial GBIF  -----
-
-# The extraction occ are running in the FROV PC (see GBIF.FROV.r)
-
+getwd()
 files = list.files(path = "./Database",  pattern = "Iberia_") 
 f= files[4]
 
@@ -489,8 +491,15 @@ cities1 <- cities %>% filter(country %in% c("Andorra", "Gibraltar","Spain","Port
 
 points <- read_rds(paste0("./Database/Iberia_ES.rds") )
 points1 <- read_rds(paste0("./Database/Iberia_PT.rds") )
-
 ib = rbind(points,points1)
+
+points2 = read_xlsx("./Database/ibermis.xlsx") 
+table(points2$country)
+colnames(points2)[4] = "species"
+colnames(points2)[12] = "decimalLatitude"
+colnames(points2)[13] = "decimalLongitude"
+
+ib = rbind(ib[,c(1,7,8)], points2[,c(4,12,13)])
 
 points_sf <- st_as_sf(ib, coords = c("decimalLongitude", "decimalLatitude"), crs = 4326)
 
@@ -537,7 +546,7 @@ density_raster[density_raster == 0] <- NA
 
 density_df <- as.data.frame(density_raster, xy = TRUE)
 names(density_df)
-density_df = density_df[,c(1,2,13)]
+density_df = density_df[,c(1,2,4)]
 colnames(density_df) <- c("longitude", "latitude", "density")
 
 raster_points <- rasterToPoints(density_raster)
@@ -548,27 +557,27 @@ names(df) <- c("longitude", "latitude", "value")
 library(scales)
 countries_geom <- sf::st_simplify(countries_geom, preserveTopology = TRUE, dTolerance = 1000)
 
-ggplot() +xlim(-10, 5.6) + ylim(35, 45) +
-geom_segment(data = df,aes(x = longitude, y = latitude,
-            xend = longitude,
-          yend = latitude + (value/max(value, na.rm = TRUE)) * 2,
-          color = value),
-    alpha = 0.8,
-   size = 0.5) + # color_palette+ 
+p1= ggplot() +xlim(-10, 5.6) + ylim(35, 45) +
+  geom_segment(data = df,aes(x = longitude, y = latitude,
+                             xend = longitude,
+                             yend = latitude + (value/max(value, na.rm = TRUE)) * 2,
+                             color = value),
+               alpha = 0.8,
+               size = 0.5) + # color_palette+ 
   scale_color_viridis_c(option = "C", direction = 1, end = 0.9,  # Customize the viridis options as needed
-                        name = "Number of GBIF occurrences",
+                        name = "Number of GBIF \n occurrences",
                         breaks = c(0, 2500, 5000, 7500, 10000,12000,15000)) +
- geom_sf(data = countries_geom, color = "black", fill = "NA") + 
- theme_void()+
+  geom_sf(data = countries_geom, color = "black", fill = "NA") + 
+  theme_void()+
   theme(
     legend.position = "right",           # Keep legend on the right
-    legend.title = element_text(size = 8),  # Smaller title
-    legend.text = element_text(size = 6),   # Smaller text
+    legend.title = element_text(size = 10),  # Smaller title
+    legend.text = element_text(size = 8),   # Smaller text
     legend.key.size = unit(0.4, "cm")       # Smaller legend key boxes
   )+ 
-  geom_sf(data = cities2, color = "red", size = 1) +  
-  geom_sf_text(data = cities2, aes(label = city), color = "red", size = 3, fontface = "bold", nudge_y = -0.2) 
-
+  geom_sf(data = cities2, color = "tan2",font="bold", size = 1) +  
+  geom_sf_text(data = cities2, aes(label = city), font="bold", color = "tan2", size = 3, fontface = "bold", nudge_y = -0.2) 
+p1
 ggsave(last_plot(), device = "svg", filename="a.svg", dpi =10)
 
 
@@ -620,7 +629,7 @@ df <- as.data.frame(raster_points)
 names(df) <- c("longitude", "latitude", "value")
 
 #library(scales)
-ggplot() +#xlim(1.4, 1.8) + ylim(42.4, 42.7) +
+p5= ggplot() +#xlim(1.4, 1.8) + ylim(42.4, 42.7) +
   geom_segment(data = df,aes(x = longitude, y = latitude,
                              xend = longitude,
                              yend = latitude + (value/max(value, na.rm = TRUE)) * 0.1,
@@ -632,8 +641,8 @@ ggplot() +#xlim(1.4, 1.8) + ylim(42.4, 42.7) +
                         breaks = c(0, 2500, 5000, 7500, 10000,12000,15000)) +
   geom_sf(data = countries_geom, color = "black", fill = "NA") + 
   theme_void()+
-  geom_sf(data = cities2, color = "red", size = 1) +  
-  geom_sf_text(data = cities2, aes(label = city), color = "red", size = 3, fontface = "bold", nudge_y = 0.009) 
+  geom_sf(data = cities2, color = "tan2", size = 1) +  
+  geom_sf_text(data = cities2, aes(label = city), color = "tan2", size = 3, fontface = "bold", nudge_y = 0.009) 
 
 ggsave(last_plot(), device = "svg", filename="b.svg", dpi =300)
 
@@ -688,7 +697,7 @@ df <- as.data.frame(raster_points)
 names(df) <- c("longitude", "latitude", "value")
 
 #library(scales)
-ggplot() +#xlim(1.4, 1.8) + ylim(42.4, 42.7) +
+p3= ggplot() +#xlim(1.4, 1.8) + ylim(42.4, 42.7) +
   geom_segment(data = df,aes(x = longitude, y = latitude,
                              xend = longitude,
                              yend = latitude + (value/max(value, na.rm = TRUE)) * 0.1,
@@ -699,9 +708,9 @@ ggplot() +#xlim(1.4, 1.8) + ylim(42.4, 42.7) +
                         name = "Number of GBIF occurrences",
                         breaks = c(0, 2500, 5000, 7500, 10000,12000,15000)) +
   geom_sf(data = countries_geom, color = "black", fill = "NA") + 
-  theme_void()+
-  geom_sf(data = cities2, color = "red", size = 1) +  
-  geom_sf_text(data = cities2, aes(label = city), color = "red", size = 3, fontface = "bold", nudge_y = 0.009) 
+  theme_void()+ 
+  geom_sf(data = cities2, color = "tan2", size = 1) +  
+  geom_sf_text(data = cities2, aes(label = city), color = "tan2", size = 3, fontface = "bold", nudge_y = 0.009) 
 
 ggsave(last_plot(), device = "svg", filename="c.svg", dpi =300)
 
@@ -713,15 +722,20 @@ cities <- read_xlsx("worldcities.xlsx")
 cities1 <- cities %>% filter(country %in% c("Andorra", "Gibraltar","Spain","Portugal")) %>%
   filter(capital %in% c("primary","admin")) %>% filter(!admin_name %in% c("Canary Islands","Azores"))
 
-con <- "Iberia"
+con <- "Andorra"
 
 for(con in c("Iberia", "Gibraltar", "Andorra")){
   
   if(con=="Iberia"){
-    points <- read_rds("./Database/Iberia_ES.rds")
-    points1 <- read_rds("./Database/Iberia_PT.rds")
+    points <- read_rds(paste0("./Database/Iberia_ES.rds") )
+    points1 <- read_rds(paste0("./Database/Iberia_PT.rds") )
+    ib = rbind(points,points1)
+    points2 = read_xlsx("./Database/ibermis.xlsx") 
+    colnames(points2)[4] = "species"
+    colnames(points2)[12] = "decimalLatitude"
+    colnames(points2)[13] = "decimalLongitude"
+    points = rbind(ib[,c(1,7,8)], points2[,c(4,12,13)])
     code  <- c("PT", "ESP")
-    points = rbind(points,points1)
   } else if(con=="Gibraltar"){
     points <- read_rds("./Database/Iberia_GI.rds")
     
@@ -760,17 +774,17 @@ for(con in c("Iberia", "Gibraltar", "Andorra")){
   }
   
   if(con == "Andorra"){
-  points_joined <- st_join(points_sf, countries)
-  species_counts <- points_joined %>%
-    group_by(NAME_1) %>%
-    summarise(species_count = n_distinct(species)) %>%
-    st_drop_geometry()  
-  
-  combined_data <- countries %>%
-    left_join(species_counts, by = "NAME_1")
+    points_joined <- st_join(points_sf, countries)
+    species_counts <- points_joined %>%
+      group_by(NAME_1) %>%
+      summarise(species_count = n_distinct(species)) %>%
+      st_drop_geometry()  
+    
+    combined_data <- countries %>%
+      left_join(species_counts, by = "NAME_1")
   }
   
-
+  
   if(con =="Iberia"){
     countries_geom <- countries_geom %>% st_cast("MULTIPOLYGON")
     mar <- marine %>% filter(TERRITORY1 %in% c("Spain", "Portugal"))
@@ -779,7 +793,7 @@ for(con in c("Iberia", "Gibraltar", "Andorra")){
   } else if(con =="Gibraltar"){ 
     mar <- marine %>% filter(TERRITORY1 %in% c("Gibraltar"))
     mar <- st_transform(mar, crs = st_crs(countries))
-    }
+  }
   
   if(con !="Andorra"){
     mar_geom <- st_geometry(mar)
@@ -790,17 +804,17 @@ for(con in c("Iberia", "Gibraltar", "Andorra")){
   plot(st_geometry(countries_geom))
   
   cat("points & countries shapefile for:", con)
-
-  if(con=="Gibraltar"){
-  countries_geom <- countries_geom %>%filter(!st_is_empty(geometry)) %>% mutate(ID = row_number()) 
-  points_joined <- st_join(points_sf, countries_geom)
-  species_counts <- points_joined %>%
-    group_by(ID) %>%
-    summarise(species_count = n_distinct(species)) %>%
-    st_drop_geometry()  
   
-  combined_data <- countries_geom %>%
-    left_join(species_counts, by = "ID")
+  if(con=="Gibraltar"){
+    countries_geom <- countries_geom %>%filter(!st_is_empty(geometry)) %>% mutate(ID = row_number()) 
+    points_joined <- st_join(points_sf, countries_geom)
+    species_counts <- points_joined %>%
+      group_by(ID) %>%
+      summarise(species_count = n_distinct(species)) %>%
+      st_drop_geometry()  
+    
+    combined_data <- countries_geom %>%
+      left_join(species_counts, by = "ID")
   }
   
   if(con=="Andorra"){
@@ -831,30 +845,40 @@ for(con in c("Iberia", "Gibraltar", "Andorra")){
   color_palette <-c("#FFFF00", "#FFEA00", "#FFA500", "#FF7F00", "#FF0000")
   cities2 <- cities2 %>% filter(!city =='Funchal')
   
-  p1=ggplot(data = combined_data) +
+  p6=ggplot(data = combined_data) + 
     geom_sf(aes(fill = species_count), color = "black") +
     #  scale_fill_gradientn(
     # colors = color_palette,
     # name = "Number of Species"
     #) +
     scale_fill_viridis_c(option = "C", direction = 1, end = 0.9,  # Customize the viridis options as needed
-                         name = "Number of Species (based on GBIF occurrences)",
+                         name = "Number of species",
                          breaks = seq(0, 1200, by = 200),  # Ensure evenly spaced breaks
                          labels = seq(0, 1200, by = 200)    # Explicitly set corresponding labels
     ) +
     theme_void() +
     #labs(fill = "Number of species") +
-    geom_sf(data = cities2, color = "black", size = 0.8) +  # Add city points
-    geom_sf_text(data = cities2, aes(label = city), color = "black", 
-                 size = 1.7, fontface = "bold", nudge_y = 0.3) +
+    geom_sf(data = cities2, color = "tan2", size = 0.8) +  # Add city points
+    geom_sf_text(data = cities2, aes(label = city), color = "tan2", 
+                 size = 3, fontface = "bold", nudge_y = 0.03) +
     theme(
-      legend.position = "right",
-      legend.text = element_text(size = 8),
-      legend.title = element_text(face = "bold", size = 8) )
-  
+      legend.position = "right",           # Keep legend on the right
+      legend.title = element_text(size = 10),  # Smaller title
+      legend.text = element_text(size = 8),   # Smaller text
+      legend.key.size = unit(0.4, "cm")       # Smaller legend key boxes
+    )
+  p4
   ggsave(filename = paste0("Sp_", con,".svg"), plot = p1,
          width = 8, height = 6, units = "in", device = "svg")
 }
+
+p <- p1 / p2 + plot_layout(heights = c(1, 1)) # Iberia
+p <- p3 / p4 + plot_layout(heights = c(1, 1)) # Gibraltar
+p <- p5 / p6 + plot_layout(heights = c(1, 1)) # Andorra
+
+ggsave(filename = "Spatial2.svg",
+  plot = p, width = 2.76,height = 3.9,units = "in",dpi = 300)
+
 
 
 ### Supplementary Figure (groups)  -----
