@@ -219,7 +219,7 @@ df.hab.text <- df.hab %>% group_by(Location, Habitat) %>% summarise(n = n())
 ### Figure 2: -----
 country = unique(df.hab$Location)
 c = 'Gibraltar'
-col <- c("FRESHWATER" = "#0d7ff1", "MARINE" = "#2616bb", 
+col <- c("FRESHWATER" = "#35e521", "MARINE" = "#2616bb", 
          "TERRESTRIAL" = "#af9b26")
 plots= list()
 for(c in country) {
