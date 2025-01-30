@@ -10,6 +10,12 @@ Analysis of the list of **established non-native** species in the Iberian Penins
 - **Temporal analysis:** (First-records)
 - **Spatial distibution:** (GBIF records)
 
+## Clone the project
+```bash
+  git clone https://github.com/IsmaSA/Iberia_NNS
+```
+
+
 ## Abstract
 To fill
 
@@ -31,10 +37,6 @@ If you have any feedback, please send me an email to: isma-sa@hotmail.com
 ## Acknowledgements
 ...
 
-## Clone the project
-```bash
-  git clone https://github.com/IsmaSA/Iberia_NNS
-```
 
 ## Badges
 
