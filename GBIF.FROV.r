@@ -62,7 +62,9 @@ for(country in unique(df$Location)){
 
 getwd()
 
-
+names(df1)
+df1 = df[,c(1,5,11,17,7,10,15,14,13,16,18)]
+write_xlsx(df1, path = '/home/ismael-soto/Desktop/ELZA/Iberia/Database/ListNNS.Iberia.xlsx')
 
 ### read GBIF downloads  -----
 setwd("/home/ismael-soto/Desktop/ELZA/Iberia/Database")

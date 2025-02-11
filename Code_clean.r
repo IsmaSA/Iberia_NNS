@@ -40,7 +40,7 @@ table(df$Group)
 
 
 # Overall
-cat('Total species:', length(unique(df$New_names)) ) # 2,505 sp
+cat('Total species:', length(unique(df$New_names)) ) # 2,524 sp
 df %>% group_by(Location) %>% summarise(Species = n_distinct(New_names))
 
 # Phylum:
@@ -48,11 +48,11 @@ cat('Total Phylum:', length(unique(df$Phylum)) ) # 24
 df %>% group_by(Location) %>% summarise(Phylum = n_distinct(Phylum))
 
 # Class:
-cat('Total Class:', length(unique(df$Class)) ) # 24 
+cat('Total Class:', length(unique(df$Class)) ) # 23
 df %>% group_by(Location) %>% summarise(Class = n_distinct(Class))
 
 # Family:
-cat('Total Family:', length(unique(df$Family)) ) # 24 
+cat('Total Family:', length(unique(df$Family)) ) # 598
 df %>% group_by(Location) %>% summarise(Family = n_distinct(Family))
 
 
@@ -71,6 +71,18 @@ shared_species <- location_pairs %>% rowwise() %>%
     Total2 = n_distinct(species_locations$Taxon[species_locations$Location == Location2]),
     Overlap_Share = Shared / min(Total1, Total2)  * 100 ) %>% ungroup()
 
+## 2.0 (no overlap)
+shared_species <- location_pairs %>% rowwise() %>% mutate(
+    Shared = length(intersect(
+      species_locations$Taxon[species_locations$Location == Location1],
+      species_locations$Taxon[species_locations$Location == Location2]
+    )),
+    Total1 = n_distinct(species_locations$Taxon[species_locations$Location == Location1]),
+    Total2 = n_distinct(species_locations$Taxon[species_locations$Location == Location2]),
+    Overlap1_to_2 = (Shared / Total1) * 100,  # % of Location1's species found in Location2
+    Overlap2_to_1 = (Shared / Total2) * 100   # % of Location2's species found in Location1
+  ) %>% ungroup()
+
 
 # Taxonomic composition (Groups)-----
 table(df$Group)
@@ -84,6 +96,16 @@ df$Group[df$Group =="Microorganism"] <- "Microorganisms"
 df$Group[df$Group =="mammals"] <- "Mammals"
 df$Group[df$Group =="Invertebrates (excl. Arthropods, Molluscs)"] <- "Other invertebrates"
 df$Group[df$Group =="Arthropods p.p. (Myriapods, Diplopods etc.)"] <- "Other invertebrates"
+
+# This is for Table S3: 
+most_representative <- df %>%
+  group_by(Class, Family, Taxon, Group) %>%
+  summarise(Loc = n_distinct(Location), .groups = "drop") %>%
+  arrange(Class, desc(Loc)) %>%
+  group_by(Class, Family) 
+
+# --- 
+
 
 df %>% group_by(Group) %>% summarise(Species = n_distinct(New_names)) %>% arrange(-Species)
 df %>% group_by(Location,Group) %>% summarise(Species = n_distinct(New_names)) %>% arrange(-Species)
@@ -882,6 +904,42 @@ ggsave(filename = "Spatial2.svg",
 
 
 ### Supplementary Figure (groups)  -----
+
+# Fig S1. Venn Diagram  -------
+install.packages("ggVennDiagram")
+install.packages("VennDiagram")
+library(ggVennDiagram)
+library(VennDiagram)
+
+species_locations <- df %>%  dplyr::select(Location, Taxon) %>% distinct()
+
+countries <- c("Spain", "Portugal", "Gibraltar", "Andorra")
+
+species_list <- lapply(countries, function(country) {
+  species_locations %>% filter(Location == country) %>%
+ pull(Taxon) %>%  unique() } )
+
+names(species_list) <- countries
+
+location_colors <- c(
+  "Spain" = "#ff7f00",
+  "Portugal" = "#33a02c", 
+  "Andorra" = "#e31a1c", 
+  "Gibraltar" = "#1f78b4")
+
+ggVennDiagram(species_list, 
+              label_alpha = 1, 
+              edge_lty = "solid",
+              set_color = location_colors) +  # Use set_color instead of scale_fill_manual
+  scale_fill_gradient(low = "white", high = "white") +  # Make fills transparent
+  scale_color_manual(values = location_colors) +  # Apply colors to the borders
+  theme_void()
+ggsave(last_plot(), filename = "Venn.svg", device = "svg")
+
+
+
+## Fig S2. Grous  -------
+
 head(df)
 df$Group[df$Group =="Dinoflagellata"] <- "Microorganisms"
 df$Group[df$Group =="Viruses"] <- "Microorganisms"
@@ -912,4 +970,208 @@ ggplot(df1, aes(Group, n, fill = Group)) + geom_bar(stat = "identity",size= 0.2,
     axis.text.x = element_text(angle = 45, hjust = 1),
     strip.text = element_text(face = "bold"),
     legend.position = "none")
+
+
+## Fig S3. Spatial data normalised  -------
+list.files(pattern = 'rds')
+
+country <- c('Iberia', 'Andorra', 'Gibraltar')
+c= 'Iberia'
+marine <- st_read("./World_EEZ_v12_20231025/eez_v12.shp")
+cities <- read_xlsx("worldcities.xlsx")
+cities1 <- cities %>% filter(country %in% c("Andorra", "Gibraltar","Spain","Portugal")) %>%
+  filter(capital %in% c("primary","admin")) %>% filter(!admin_name %in% c("Canary Islands","Azores"))
+plots <- list()
+
+for(c in country){  
+  print(c)
+  Sys.sleep(2)
+  if(c =='Iberia'){
+  points <- read_rds(paste0('./Database/Iberia_ES.rds') )
+  points1 <- read_rds(paste0('./Database/Iberia_PT.rds') )
+  ib = rbind(points,points1)
+  points2 = read_xlsx("./Database/ibermis.xlsx") 
+  colnames(points2)[4] = "species"
+  colnames(points2)[12] = "decimalLatitude"
+  colnames(points2)[13] = "decimalLongitude"
+  points = rbind(ib[,c(1,7,8)], points2[,c(4,12,13)])
+  code  <- c("PT", "ESP")
+
+  } else if(c =='Andorra'){
+  points <- read_rds(paste0('./Database/Iberia_AD.rds') )
+   code  <- "AND"
+  }else if(c =='Gibraltar'){ 
+  points <- read_rds(paste0('./Database/Iberia_GI.rds') )
+  }
+  points_sf <- st_as_sf(points, coords = c("decimalLongitude", "decimalLatitude"), crs = 4326)
+
+if (c=="Gibraltar") {
+    world_states <- ne_states(returnclass = "sf")
+    countries <- world_states[world_states$name == "Gibraltar", ]
+  } else{
+    countries<- geodata::gadm(
+      country = c(code),level = 1, path = getwd() ) %>%
+      sf::st_as_sf() %>%
+      sf::st_cast("MULTIPOLYGON") %>%  st_transform(crs = st_crs(points_sf)) %>% 
+      filter(!NAME_1 %in% c("Islas Baleares","Islas Canarias", "Ceuta y Melilla", "Azores", "Madeira"))
+  }
+
+  # Size of each boundary
+if (c=="Iberia") {
+spain = rvest::read_html('https://en.wikipedia.org/wiki/Autonomous_communities_of_Spain') %>% rvest::html_table() %>% .[[2]]
+spain = spain[,c(2,9)] 
+spain = spain %>% mutate(Area_km2 = str_replace(as.character(str_extract(`Area(km2)`, "^[0-9,]+")), ",", ".")) %>%
+  mutate(Area_km2 = as.numeric(Area_km2))
+spain = spain[,c(1,3)] 
+pt = rvest::read_html('https://en.wikipedia.org/wiki/Districts_of_Portugal') %>% rvest::html_table() %>% .[[5]]
+pt = pt[,c(1,5)]
+pt = pt %>% mutate(`Area(km2)` = str_replace(as.character(str_extract(`Area(km2)`, "^[0-9,]+")), ",", "."))
+colnames(spain) = c('NAME_1', 'Area_km2')
+colnames(pt) = c('NAME_1', 'Area_km2')
+i <- rbind(spain,pt)
+setdiff(i$NAME_1, countries$NAME_1)
+i$NAME_1[i$NAME_1 == "Andalusia"] = 'Andalucía'
+i$NAME_1[i$NAME_1 == "Asturias"] = 'Principado de Asturias'
+i$NAME_1[i$NAME_1 == "Basque Country"] = 'País Vasco'
+i$NAME_1[i$NAME_1 == "Castile and León"] = 'Castilla y León'
+i$NAME_1[i$NAME_1 == "Catalonia"] = 'Cataluña'
+i$NAME_1[i$NAME_1 == "Murcia"] = 'Región de Murcia'
+i$NAME_1[i$NAME_1 == "Valencia"] = 'Comunidad Valenciana'
+i$NAME_1[i$NAME_1 == "Lisbon"] = 'Lisboa'
+i$NAME_1[i$NAME_1 == "Aragon"] = 'Aragón'
+i$NAME_1[i$NAME_1 == "Castilla–La Mancha"] = 'Castilla-La Mancha'
+i$NAME_1[i$NAME_1 == "Madrid"] = 'Comunidad de Madrid'
+i$NAME_1[i$NAME_1 == "Navarre"] = 'Comunidad Foral de Navarra'
+
+countries <- countries %>% left_join(i, by ="NAME_1")
+
+} else if(c=='Andorra'){
+  area = rvest::read_html('https://en.wikipedia.org/wiki/Parishes_of_Andorra') %>% rvest::html_table() %>% .[[4]]
+  area = area[-1,c(2,4)] %>% filter(as.numeric(Area) < 400)
+  colnames(area) = c('NAME_1', 'Area_km2')
+setdiff(area$NAME_1, countries$NAME_1)
+area$NAME_1[area$NAME_1 == "Escaldes–Engordany"] = 'Escaldes-Engordany'
+area$NAME_1[area$NAME_1 == "La Massana[2]"] = 'La Massana'
+countries <- countries %>% left_join(area, by ="NAME_1")
+}else if(c=='Gibraltar'){
+  area = '6.8' 
+  countries$area_km2 = area
+}
+
+countries_geom <- st_geometry(countries)
+plot(st_geometry(countries_geom))
+  
+if(c =="Iberia"){
+    mar <- marine %>% filter(TERRITORY1 %in% c("Spain", "Portugal"))
+    mar <- st_transform(mar, crs = st_crs(countries))
+    mar <- mar %>% st_cast("POLYGON")
+    mar_geom <- st_geometry(mar)
+    area1 <- st_area(mar_geom)
+    area1 <- as.numeric(area1) / 1e6
+    mar$area_km2 =area1
+  } else if(c =="Gibraltar"){ 
+    mar <- marine %>% filter(TERRITORY1 %in% c("Gibraltar"))
+    mar <- st_transform(mar, crs = st_crs(countries))
+    mar_geom <- st_geometry(mar)
+    mar_geom <- st_cast(mar, "MULTIPOLYGON") %>% st_geometry()
+    plot(mar_geom)
+    area1 <- st_area(mar_geom)
+    area1 <- as.numeric(area1) / 1e6
+mar$area_km2 =area1
+  }
+  
+  if(c !="Andorra"){
+    mar_geom <- st_geometry(mar)
+    mar_geom <- st_cast(mar, "MULTIPOLYGON") %>% st_geometry()
+    countries_geom <- st_sf(geometry = c(st_geometry(countries_geom), mar_geom))
+  }
+plot(countries_geom)
+
+ if(c=="Gibraltar"){
+    countries_geom <- countries_geom %>%filter(!st_is_empty(geometry)) %>% mutate(ID = row_number()) 
+    points_joined <- st_join(points_sf, countries_geom)
+    species_counts <- points_joined %>%
+      group_by(ID) %>%
+      summarise(species_count = n_distinct(species)) %>%
+      st_drop_geometry()  
+    combined_data <- countries_geom %>%  left_join(species_counts, by = "ID") %>% mutate(area_km2 = c('8.6',area1))
+  }
+   if(c=="Andorra"){
+    countries_geom <- countries %>%filter(!st_is_empty(geometry)) %>% mutate(ID = row_number()) 
+    points_joined <- st_join(points_sf, countries_geom)
+    species_counts <- points_joined %>%
+      group_by(ID, NAME_1) %>%
+      summarise(species_count = n_distinct(species)) %>%
+      st_drop_geometry()  
+    combined_data <- countries_geom %>%  left_join(species_counts, by = "ID")
+    colnames(combined_data)[12] = "area_km2"
+  }
+   if(c=="Iberia"){
+    countries_geom <- countries_geom %>%filter(!st_is_empty(geometry)) %>% mutate(ID = row_number()) 
+    points_joined <- st_join(points_sf, countries_geom)
+   species_counts <- points_joined %>%
+      group_by(ID) %>%
+      summarise(species_count = n_distinct(species)) %>%
+      st_drop_geometry()  
+    combined_data <- countries_geom %>%  left_join(species_counts, by = "ID") 
+
+    geom <- st_geometry(combined_data)
+    area1 <- st_area(geom)
+    area1 <- as.numeric(area1) / 1e6
+    combined_data$area_km2 =area1
+  }
+  combined_data1 <- combined_data %>%
+  mutate(area_km2 = as.numeric(area_km2), species_density = species_count / area_km2) 
+
+  if(c =="Iberia"){
+    cities2 <- cities1 %>% filter(iso2 %in% c("ES","PT")) %>%
+      st_as_sf(coords = c("lng", "lat"), crs = st_crs(countries_geom))
+      cities2 <- cities2 %>% filter(!city =='Funchal')%>% filter(city %in% c("Madrid","Lisbon"))
+  } else if(c =="Andorra"){
+    cities2 <- cities1 %>% filter(iso3 %in% c("AND")) %>%
+      st_as_sf(coords = c("lng", "lat"), crs = st_crs(countries_geom))
+  }else if(c =="Gibraltar"){
+    cities2 <- cities1 %>% filter(iso2 %in% c("GI")) %>%
+      st_as_sf(coords = c("lng", "lat"), crs = st_crs(countries_geom))
+  }
+
+p1=ggplot(data = combined_data1) + 
+    geom_sf(aes(fill = species_density), color = "black") +
+    scale_fill_viridis_c(option = "C", direction = 1, end = 0.9,  
+                         name = "Species per area (km2)",
+                        limits = c(0, 3.2), 
+                         breaks = seq(0, 3.2, by = 0.5),  
+                         labels = seq(0, 3.2, by = 0.5),
+                         oob = scales::squish     
+    ) +
+    theme_void() +
+    #labs(fill = "Number of species") +
+    geom_sf(data = cities2, color = "tan2", size = 0.8) +  # Add city points
+    geom_sf_text(data = cities2, aes(label = city), color = "tan2", 
+                size = 3, fontface = "bold", nudge_y = 0.03) +
+    theme(
+      legend.position = "right",           
+      legend.title = element_text(size = 10),  
+      legend.text = element_text(size = 8),   
+      legend.key.size = unit(0.4, "cm")      
+    )+ guides(fill = guide_colorbar())
+p1
+plots[[c]] <- p1
+}
+  
+plots[["Andorra"]]
+plots[["Gibraltar"]]
+plots[["Iberia"]]
+
+library(patchwork)
+
+final_plot <- wrap_plots(
+  plots[["Andorra"]], 
+  plots[["Iberia"]], 
+  plots[["Gibraltar"]], 
+  ncol = 1,  
+  heights = c(0.8, 3, 0.5)  ) 
+
+final_plot
+ggsave(last_plot(), filename = "Spatial.correction.svg", device = "svg")  
 
