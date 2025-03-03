@@ -1,6 +1,7 @@
 install.packages('pacman')
 pacman::p_load(sf,dplyr,tidyr,xlsx,writexl,readxl,sp, ggplot2,terra,raster, rnaturalearth,rnaturalearthdata, readr,rgbif)
 
+
 ### Iberia non-native species
 setwd("C:/Users/Propietario/Desktop/ELZA/Iberia")
 df <- read_xlsx(path = "./Iberia.xlsx")

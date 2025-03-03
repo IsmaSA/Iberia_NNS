@@ -19,127 +19,121 @@ for(f in folders){
 setwd("/home/ismael-soto/Desktop/ELZA/Iberia")
 list.files()
 
-df <- readxl::read_xlsx(path = './Database/Iberia.xlsx')
+df <- readxl::read_xlsx(path = './Database/GBIF_backbone.xlsx')
 head(df)
-df = df %>% filter(Location %in% c('Spain', 'Portugal', 'Andorra', 'Gibraltar'))
+df = df %>% filter(Country %in% c('Spain', 'Portugal', 'Andorra', 'Gibraltar'))
 names(df)
-df= df[!duplicated(df[,c('Location','GBIF_key')]), ]
-df= df[df$GBIF_key != '0', ]
-df= df[!df$New_names %in% c('Ommatotriton sp.','Acridotheres sp.'), ]
+
+
+# Check GBIF backbone: ----------
+source(GBIF.FROV.r) # done in this code
+setdiff(df$Taxon, res$name)
+
+GBIF = read_xlsx('/home/ismael-soto/Desktop/ELZA/Iberia/Database/GBIF_backbone.xlsx', sheet = 2)
+
+length(unique(GBIF$GBIF_key))
+
+if(length(unique(df$GBIF_key)) ==1672){
+  cat('Number of species match :)')} else{cat('check: there is a mismatch in sp names')}
 
 
 # Check for missing information
-nas <- sapply(df[, c("Family", "Class", "Phylum",'Group','Pathway_refined','Native_range')], function(column) {
+nas <- sapply(df[, c("Family", "Class", "Phylum",'Taxonomic group','Pathway','Native_range')], function(column) {
   sum(is.na(column))
 })
 nas
 table(df$Phylum)
 table(df$Class)
 table(df$Family)
-table(df$Group)
+table(df$'Taxonomic group')
 
 
 # Overall
-cat('Total species:', length(unique(df$New_names)) ) # 2,524 sp
-df %>% group_by(Location) %>% summarise(Species = n_distinct(New_names))
+cat('Total species:', length(unique(df$LastSpeciesName)) ) # 1,662 sp
+cat('Total species:', length(unique(df$Taxon)) ) # 1,713 sp
+df %>% group_by(Country) %>% summarise(Species = n_distinct(LastSpeciesName))
 
 # Phylum:
-cat('Total Phylum:', length(unique(df$Phylum)) ) # 24 
-df %>% group_by(Location) %>% summarise(Phylum = n_distinct(Phylum))
+cat('Total Phylum:', length(unique(df$Phylum)) ) # 19 
+df %>% group_by(Country) %>% summarise(Phylum = n_distinct(Phylum))
 
 # Class:
-cat('Total Class:', length(unique(df$Class)) ) # 23
-df %>% group_by(Location) %>% summarise(Class = n_distinct(Class))
+cat('Total Class:', length(unique(df$Class)) ) # 52
+df %>% group_by(Country) %>% summarise(Class = n_distinct(Class))
 
 # Family:
 cat('Total Family:', length(unique(df$Family)) ) # 598
-df %>% group_by(Location) %>% summarise(Family = n_distinct(Family))
+df %>% group_by(Country) %>% summarise(Family = n_distinct(Family))
 
 
 # Shared species composition
-species_locations <- df %>% dplyr::select(Location, Taxon) %>%distinct()  
+species_locations <- df %>% dplyr::select(Country, LastSpeciesName) %>%distinct()  
 
-location_pairs <- expand.grid(Location1 = unique(species_locations$Location), 
-                              Location2 = unique(species_locations$Location)) %>%
+location_pairs <- expand.grid(Location1 = unique(species_locations$Country), 
+                              Location2 = unique(species_locations$Country)) %>%
   filter(Location1 != Location2) 
 
 shared_species <- location_pairs %>% rowwise() %>%
   mutate( Shared = length(intersect(
-      species_locations$Taxon[species_locations$Location == Location1],
-      species_locations$Taxon[species_locations$Location == Location2] )),
-   Total1 = n_distinct(species_locations$Taxon[species_locations$Location == Location1]),
-    Total2 = n_distinct(species_locations$Taxon[species_locations$Location == Location2]),
+      species_locations$LastSpeciesName[species_locations$Country == Location1],
+      species_locations$LastSpeciesName[species_locations$Country == Location2] )),
+   Total1 = n_distinct(species_locations$LastSpeciesName[species_locations$Country == Location1]),
+    Total2 = n_distinct(species_locations$LastSpeciesName[species_locations$Country == Location2]),
     Overlap_Share = Shared / min(Total1, Total2)  * 100 ) %>% ungroup()
 
 ## 2.0 (no overlap)
 shared_species <- location_pairs %>% rowwise() %>% mutate(
     Shared = length(intersect(
-      species_locations$Taxon[species_locations$Location == Location1],
-      species_locations$Taxon[species_locations$Location == Location2]
+      species_locations$LastSpeciesName[species_locations$Country == Location1],
+      species_locations$LastSpeciesName[species_locations$Country == Location2]
     )),
-    Total1 = n_distinct(species_locations$Taxon[species_locations$Location == Location1]),
-    Total2 = n_distinct(species_locations$Taxon[species_locations$Location == Location2]),
+    Total1 = n_distinct(species_locations$LastSpeciesName[species_locations$Country == Location1]),
+    Total2 = n_distinct(species_locations$LastSpeciesName[species_locations$Country == Location2]),
     Overlap1_to_2 = (Shared / Total1) * 100,  # % of Location1's species found in Location2
     Overlap2_to_1 = (Shared / Total2) * 100   # % of Location2's species found in Location1
   ) %>% ungroup()
 
 
 # Taxonomic composition (Groups)-----
-table(df$Group)
-unique(df$Group)
+table(df$'Taxonomic group')
+unique(df$'Taxonomic group')
 
-df$Group[df$Group =="Dinoflagellata"] <- "Microorganisms"
-df$Group[df$Group =="Viruses"] <- "Microorganisms"
-df$Group[df$Group =="Bacteria and protozoans"] <- "Microorganisms"
-df$Group[df$Group =="Microorganism"] <- "Microorganisms"
-df$Group[df$Group =="Microorganism"] <- "Microorganisms"
-df$Group[df$Group =="mammals"] <- "Mammals"
-df$Group[df$Group =="Invertebrates (excl. Arthropods, Molluscs)"] <- "Other invertebrates"
-df$Group[df$Group =="Arthropods p.p. (Myriapods, Diplopods etc.)"] <- "Other invertebrates"
-
-# This is for Table S3: 
-most_representative <- df %>%
-  group_by(Class, Family, Taxon, Group) %>%
-  summarise(Loc = n_distinct(Location), .groups = "drop") %>%
-  arrange(Class, desc(Loc)) %>%
-  group_by(Class, Family) 
-
-# --- 
+df$'Taxonomic group'[df$'Taxonomic group' =="mammals"] <- "Mammals"
+df$'Taxonomic group'[df$'Taxonomic group' =="Amphibia"] <- "Amphibians"
 
 
-df %>% group_by(Group) %>% summarise(Species = n_distinct(New_names)) %>% arrange(-Species)
-df %>% group_by(Location,Group) %>% summarise(Species = n_distinct(New_names)) %>% arrange(-Species)
+df %>% group_by(df$'Taxonomic group') %>% summarise(Species = n_distinct(LastSpeciesName)) %>% arrange(-Species)
+df %>% group_by(Country) %>% summarise(Species = n_distinct(LastSpeciesName)) %>% arrange(-Species)
+a= df %>% group_by(Country,df$'Taxonomic group') %>% summarise(Species = n_distinct(LastSpeciesName)) %>% arrange(-Species)
 
 
 # Taxonomic composition (Phylum, class & families)
 unique(df$Phylum)
-df %>% group_by(Phylum) %>% summarise(Species = n_distinct(New_names)) %>% arrange(-Species)
-a=df %>% group_by(Location,Phylum) %>% summarise(Species = n_distinct(New_names)) %>% arrange(-Species)
+df %>% group_by(Phylum) %>% summarise(Species = n_distinct(LastSpeciesName)) %>% arrange(-Species)
+a=df %>% group_by(Country,Phylum) %>% summarise(Species = n_distinct(LastSpeciesName)) %>% arrange(-Species)
 
-df %>% group_by(Class) %>% summarise(Species = n_distinct(New_names)) %>% arrange(-Species)
-a=df %>% group_by(Location,Class) %>% summarise(Species = n_distinct(New_names)) %>% arrange(-Species)
+df %>% group_by(Class) %>% summarise(Species = n_distinct(LastSpeciesName)) %>% arrange(-Species)
+a=df %>% group_by(Country,Class) %>% summarise(Species = n_distinct(LastSpeciesName)) %>% arrange(-Species)
 
-df %>% group_by(Family) %>% summarise(Species = n_distinct(New_names)) %>% arrange(-Species)
-a=df %>% group_by(Location,Family) %>% summarise(Species = n_distinct(New_names)) %>% arrange(-Species)
+df %>% group_by(Family) %>% summarise(Species = n_distinct(LastSpeciesName)) %>% arrange(-Species)
+a=df %>% group_by(Country,Family) %>% summarise(Species = n_distinct(LastSpeciesName)) %>% arrange(-Species)
 
 
 ## Figure 1  ------
 df
-
 pacman::p_load(plotly, viridis,webshot2, htmlwidgets)
 add_root <- TRUE
 value_column <- "n"
-country <- "Andorra"
+country <- "Spain"
 pp <- list()
 for(country in c("Spain","Portugal","Gibraltar", "Andorra")) {
   
-  df1 <- df %>% filter(Location ==country) 
-  df1 <- df1[, c("Taxon", "Phylum", "Class","Family")]
+  df1 <- df %>% filter(Country ==country) 
+  df1 <- df1[, c("LastSpeciesName", "Phylum", "Class","Family")]
   
-  df2 = df1 %>% group_by(Phylum, Class, Family) %>% summarise(n=n_distinct(Taxon))
+  df2 = df1 %>% group_by(Phylum, Class, Family) %>% summarise(n=n_distinct(LastSpeciesName))
   DF = df2
   require(data.table)  
-
   colNamesDF <- names(DF)
   
   if(is.data.table(DF)){
@@ -185,57 +179,64 @@ for(country in c("Spain","Portugal","Gibraltar", "Andorra")) {
   hierarchyDT[, parents := apply(.SD, 1, function(x){fifelse(all(is.na(x)), yes = NA_character_, no = paste(x[!is.na(x)], sep = ":", collapse = " - "))}), .SDcols = parent_columns]
   hierarchyDT[, ids := apply(.SD, 1, function(x){paste(x[!is.na(x)], collapse = " - ")}), .SDcols = c("parents", "labels")]
   hierarchyDT[, c(parent_columns) := NULL]
-  
-p1=plot_ly(
-    data = hierarchyDT,
-    ids = ~ids,
-    labels = ~labels,
-    parents = ~parents,
-    values = ~values,
-    type = 'sunburst',
-    # textinfo = "label+percent root",
-    branchvalues = 'total',
-    insidetextfont = list(color = 'black', size = 16, family = 'Arial'), # Inside text color and font
-    outsidetextfont = list(color = 'black', size = 16, family = 'Arial')  )
-  
+unique(df2$Phylum)  
+
+cols <- c(
+  "Annelida" = "#E41A1C",       
+  "Arthropoda" = "#b89437",     
+  "Ascomycota" = "#4aaf72",     
+  "Bryophyta" = "#984EA3",      
+  "Bryozoa" = "#FF7F00",        
+  "Cercozoa" = "#FFFF33",       
+  "Chlorophyta" = "#A65628",    
+  "Chordata" = "#8d81f7",       
+  "Chytridiomycota" = "#999999", 
+  "Cnidaria" = "#66C2A5",       
+  "Ctenophora" = "#FC8D62",     
+  "Mollusca" = "#8DA0CB",      
+  "Myzozoa" = "#E78AC3",       
+  "Nematoda" = "#A6D854",       
+  "Ochrophyta" = "#FFD92F",     
+  "Oomycota" = "#E5C494",      
+  "Platyhelminthes" = "#B3B3B3", 
+  "Rhodophyta" = "#CAB2D6",     
+  "Tracheophyta" = "#14a34e"   
+)
+
+hierarchyDT$phylum <- sapply(strsplit(hierarchyDT$ids, " - "), function(x) {
+  if (length(x) >= 2) x[2] else NA_character_ 
+})
+hierarchyDT$color <- cols[hierarchyDT$phylum]
+
+p1 <- plot_ly(
+  data = hierarchyDT,
+  ids = ~ids,
+  labels = ~labels,
+  parents = ~parents,
+  values = ~values,
+  type = 'sunburst',
+  branchvalues = 'total',
+  marker = list(
+    colors = ~color,  # Use assigned colors
+    line = list(color = "white", width = 1)
+  ),
+  insidetextfont = list(color = 'black', size = 16, family = 'Arial'),
+  outsidetextfont = list(color = 'black', size = 16, family = 'Arial')
+)
+p1
   pp[[country]] <- p1
 
-# Run this with windows - change to chrome to brave browser
-htmlwidgets::saveWidget(widget = p1, file = file.path('./Plots', paste0(country, '.html')), selfcontained = FALSE)
+# Run this with using windows 
+htmlwidgets::saveWidget(widget = p1, 
+file = file.path('/home/ismael-soto/Documents/GitHub/Iberia_NNS/Plots', paste0(country, '.html')), selfcontained = FALSE)
+
 webshot2::webshot(
-  file.path('./Plots', paste0(country, '.html')), 
-  file = file.path('./Plots', paste0(country, '.pdf')),  selector = "body")
+  file.path('/home/ismael-soto/Documents/GitHub/Iberia_NNS/Plots', paste0(country, '.html')), 
+  file = file.path('/home/ismael-soto/Documents/GitHub/Iberia_NNS/Plots', paste0(country, '.pdf')),  selector = "body")
  
  cat(country)
 }
-
-
-### Habitats -----
-unique(df$Habitat)
-
-df$Habitat[df$Habitat =='MARINE|MARINE'] = 'MARINE'
-df$Habitat[df$Habitat =='FRESHWATER-MARINE'] = 'FRESHWATER|MARINE'
-df$Habitat[df$Habitat =='FRESHWATER MARINE'] = 'FRESHWATER|MARINE'
-df$Habitat[df$Habitat =='FRESHWATER|MARINE|MARINE'] = 'FRESHWATER|MARINE'
-df$Habitat[df$Habitat =='TERRESTRIAL|FRESHWATER|MARINE|MARINE'] = 'TERRESTRIAL|FRESHWATER|MARINE'
-unique(df$Habitat)
-
-
-df.hab <- df %>%
-  mutate(Habitat = str_replace_all(Habitat, "\\s+", ""), 
-         Habitat = str_replace_all(Habitat, "-", "|"),
-         Habitat = str_replace_all(Habitat, "FRESHWATER-MARINE", "FRESHWATER|MARINE"))    
-unique(df.hab$Habitat)
-
-df.hab <- df.hab %>% separate_rows(Habitat, sep = "\\|") %>%  filter(Habitat != "")  
-df.hab <- df.hab[!df.hab$Habitat=='HOST', ] 
-unique(df.hab$Habitat)
-table(df.hab$Habitat)
-
-df.hab <- df.hab %>% group_by(Location, Habitat) %>% summarise(n = n())
-str(df.hab)
-
-df.hab.text <- df.hab %>% group_by(Location, Habitat) %>% summarise(n = n())
+options(browser = "/snap/bin/chromium")
 
 
 ### Figure 2: -----

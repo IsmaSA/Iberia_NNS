@@ -122,13 +122,67 @@ saveRDS(occurrence_data1, paste0('Iberia_', code,'.rds') )
 
 
 
-# spocc  -----
-install.packages("terra", dependencies = TRUE)
-install.packages("spocc", dependencies = TRUE)
-install.packages("remotes")
-remotes::install_github("ropensci/spocc")
-library("spocc")
+# GBIF backbone  -----
 
-cawr<-'Campylorhynchus brunneicapillus' ##California cactus wren
-cawr_obs<-occ(query = cawr, from=c('inat','ebird','vertnet','idigbio','obis'), limit = 50000, has_coords = TRUE)
-obs<-occ2df(cawr_obs)
+res <- data.frame()
+errors <- data.frame()
+h <- 1
+name <- "Eichhornia crassipes"
+name <- "Pontederia crassipes"
+i=1
+# Use accepted usage key
+for (i in 1:nrow(df)) {
+  cat(h, "/", nrow(df), "\n")  
+  h <- h + 1
+
+df1 = df[i,]
+name =  df1$Taxon
+  
+  tryCatch({
+    data <- name_backbone(name = name)
+    
+    if (!is.null(data)) {
+df1$CanonicalName <- data$canonicalName
+
+if ("acceptedUsageKey" %in% colnames(data)) {
+  df1$GBIF_key <- data$acceptedUsageKey
+} else if ("usageKey" %in% colnames(data)) {
+  df1$GBIF_key <- data$usageKey
+} else {
+  df1$GBIF_key <- NA
+}
+df1$tatus = data$status
+df1$ScientificName <- data$scientificName
+      
+data1= occ_search(taxonKey= df1$GBIF_key , limit=1)[['data']]
+
+df1$LastSpeciesName = data1$species
+
+      res <- rbind(res, df1)
+    } else {
+      warning("No result for name: ", name)
+    }
+  }, error = function(e) {
+    errors <- rbind(errors, data.frame(name = name, error_message = e$message))
+    cat("Error with name:", name, "\n") 
+  })
+}
+names(res)
+res1 = res[!duplicated(res[,c('Country','LastSpeciesName')]), ]
+unique(res$Taxon)
+
+write_xlsx(res1, path = '/home/ismael-soto/Desktop/ELZA/Iberia/Database/GBIF_backbone.xlsx')
+
+# Four particular cases
+Agave americana L. subsp. americana × Agave salmiana 
+anacetum cinerariifolium 
+Junglans regia
+Tetranecmoidea peregrina
+
+
+name <- "Agave americana"
+
+data= occ_search(scientificName = name, limit = 3)
+data
+data= data[['data']]
+
