@@ -27,13 +27,10 @@ names(df)
 
 # Check GBIF backbone: ----------
 source(GBIF.FROV.r) # done in this code
-setdiff(df$Taxon, res$name)
-
-GBIF = read_xlsx('/home/ismael-soto/Desktop/ELZA/Iberia/Database/GBIF_backbone.xlsx', sheet = 2)
-
+GBIF = read_xlsx('/home/ismael-soto/Desktop/ELZA/Iberia/Database/GBIF_backbone.xlsx')
 length(unique(GBIF$GBIF_key))
 
-if(length(unique(df$GBIF_key)) ==1672){
+if(length(unique(df$GBIF_key)) ==1756){
   cat('Number of species match :)')} else{cat('check: there is a mismatch in sp names')}
 
 
@@ -47,10 +44,19 @@ table(df$Class)
 table(df$Family)
 table(df$'Taxonomic group')
 
+# check if there is similar names: 
+a=similar(df$Phylum)
+a=similar(df$Class)
+a=similar(df$Family)
+
+b <- a$term_groups[duplicated(a$term_groups$Cluster), ]
+
+df$Family[df$Family =='Apiceae'] ='Apiaceae'
+
 
 # Overall
-cat('Total species:', length(unique(df$LastSpeciesName)) ) # 1,662 sp
-cat('Total species:', length(unique(df$Taxon)) ) # 1,713 sp
+cat('Total species:', length(unique(df$LastSpeciesName)) ) # 1,727 sp
+cat('Total species:', length(unique(df$Taxon)) ) # 1,831 sp
 df %>% group_by(Country) %>% summarise(Species = n_distinct(LastSpeciesName))
 
 # Phylum:
@@ -62,7 +68,7 @@ cat('Total Class:', length(unique(df$Class)) ) # 52
 df %>% group_by(Country) %>% summarise(Class = n_distinct(Class))
 
 # Family:
-cat('Total Family:', length(unique(df$Family)) ) # 598
+cat('Total Family:', length(unique(df$Family)) ) # 398
 df %>% group_by(Country) %>% summarise(Family = n_distinct(Family))
 
 
@@ -100,6 +106,7 @@ unique(df$'Taxonomic group')
 
 df$'Taxonomic group'[df$'Taxonomic group' =="mammals"] <- "Mammals"
 df$'Taxonomic group'[df$'Taxonomic group' =="Amphibia"] <- "Amphibians"
+df$'Taxonomic group'[df$'Taxonomic group' =="Insects"] <- "Insect"
 
 
 df %>% group_by(df$'Taxonomic group') %>% summarise(Species = n_distinct(LastSpeciesName)) %>% arrange(-Species)
@@ -232,11 +239,15 @@ file = file.path('/home/ismael-soto/Documents/GitHub/Iberia_NNS/Plots', paste0(c
 
 webshot2::webshot(
   file.path('/home/ismael-soto/Documents/GitHub/Iberia_NNS/Plots', paste0(country, '.html')), 
-  file = file.path('/home/ismael-soto/Documents/GitHub/Iberia_NNS/Plots', paste0(country, '.pdf')),  selector = "body")
+  file = file.path('/home/ismael-soto/Documents/GitHub/Iberia_NNS/Plots', paste0(country, '.pdf')),  
+  selector = "body",
+  browser = "/usr/bin/chromium-browser",  # or full path: "/usr/bin/chromium-browser"
+)
  
  cat(country)
 }
 options(browser = "/snap/bin/chromium")
+
 
 
 ### Figure 2: -----

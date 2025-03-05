@@ -5,13 +5,78 @@ pacman::p_load(sf,dplyr,tidyr,xlsx,writexl,readxl,sp, CoordinateCleaner, ggplot2
 
 setwd("/home/ismael-soto/Desktop/ELZA/Iberia")
 list.files()
-df <- readxl::read_xlsx(path = './Database/Iberia.xlsx')
+df <- readxl::read_xlsx(path = './Database/ListNNS.Iberia.xlsx', sheet = 2)
 head(df)
-df = df %>% filter(Location %in% c('Spain', 'Portugal', 'Andorra', 'Gibraltar'))
+df = df %>% filter(Country %in% c('Spain', 'Portugal', 'Andorra', 'Gibraltar'))
 names(df)
-df= df[!duplicated(df[,c('Location','GBIF_key')]), ]
-df= df[df$GBIF_key != '0', ]
-df= df[!df$New_names %in% c('Ommatotriton sp.','Acridotheres sp.'), ]
+unique(df$'Ismael Notes')
+df= df[!df$'Ismael Notes' %in% c('Remove','remove','Removed (Cesar)','Remove (crypto)','Unsure what to do'),]
+
+
+
+
+# GBIF backbone  -----
+
+res <- data.frame()
+errors <- data.frame()
+h <- 1
+name <- "Eichhornia crassipes"
+name <- "Pontederia crassipes"
+i=1
+# Use accepted usage key
+for (i in 1:nrow(df)) {
+  cat(h, "/", nrow(df), "\n")  
+  h <- h + 1
+
+df1 = df[i,]
+name =  df1$Taxon
+  
+  tryCatch({
+    data <- name_backbone(name = name)
+    
+    if (!is.null(data)) {
+df1$CanonicalName <- data$canonicalName
+
+if ("acceptedUsageKey" %in% colnames(data)) {
+  df1$GBIF_key <- data$acceptedUsageKey
+} else if ("usageKey" %in% colnames(data)) {
+  df1$GBIF_key <- data$usageKey
+} else {
+  df1$GBIF_key <- NA
+}
+df1$tatus = data$status
+df1$ScientificName <- data$scientificName
+      
+data1= occ_search(taxonKey= df1$GBIF_key , limit=1)[['data']]
+
+df1$LastSpeciesName = data1$species
+
+      res <- rbind(res, df1)
+    } else {
+      warning("No result for name: ", name)
+    }
+  }, error = function(e) {
+    errors <- rbind(errors, data.frame(name = name, error_message = e$message))
+    cat("Error with name:", name, "\n") 
+  })
+}
+names(res)
+unique(res$Taxon)
+
+write_xlsx(res, path = '/home/ismael-soto/Desktop/ELZA/Iberia/Database/GBIF_backbone.xlsx')
+
+# Four particular cases
+Cereus peruvianus
+Dohrniphora papuana 
+Prodiplosis vaccinii 
+Wlassiscia pannonica
+
+name <- ""
+
+data= occ_search(scientificName = name, limit = 3)
+data
+data= data[['data']]
+
 
 
 ###  GBIF extraction ------------
@@ -119,70 +184,4 @@ saveRDS(occurrence_data1, paste0('Iberia_', code,'.rds') )
   })
 }
 
-
-
-
-# GBIF backbone  -----
-
-res <- data.frame()
-errors <- data.frame()
-h <- 1
-name <- "Eichhornia crassipes"
-name <- "Pontederia crassipes"
-i=1
-# Use accepted usage key
-for (i in 1:nrow(df)) {
-  cat(h, "/", nrow(df), "\n")  
-  h <- h + 1
-
-df1 = df[i,]
-name =  df1$Taxon
-  
-  tryCatch({
-    data <- name_backbone(name = name)
-    
-    if (!is.null(data)) {
-df1$CanonicalName <- data$canonicalName
-
-if ("acceptedUsageKey" %in% colnames(data)) {
-  df1$GBIF_key <- data$acceptedUsageKey
-} else if ("usageKey" %in% colnames(data)) {
-  df1$GBIF_key <- data$usageKey
-} else {
-  df1$GBIF_key <- NA
-}
-df1$tatus = data$status
-df1$ScientificName <- data$scientificName
-      
-data1= occ_search(taxonKey= df1$GBIF_key , limit=1)[['data']]
-
-df1$LastSpeciesName = data1$species
-
-      res <- rbind(res, df1)
-    } else {
-      warning("No result for name: ", name)
-    }
-  }, error = function(e) {
-    errors <- rbind(errors, data.frame(name = name, error_message = e$message))
-    cat("Error with name:", name, "\n") 
-  })
-}
-names(res)
-res1 = res[!duplicated(res[,c('Country','LastSpeciesName')]), ]
-unique(res$Taxon)
-
-write_xlsx(res1, path = '/home/ismael-soto/Desktop/ELZA/Iberia/Database/GBIF_backbone.xlsx')
-
-# Four particular cases
-Agave americana L. subsp. americana × Agave salmiana 
-anacetum cinerariifolium 
-Junglans regia
-Tetranecmoidea peregrina
-
-
-name <- "Agave americana"
-
-data= occ_search(scientificName = name, limit = 3)
-data
-data= data[['data']]
 

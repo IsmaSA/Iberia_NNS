@@ -4,19 +4,24 @@
 
 getwd()
 
-ib <- read_xlsx("/home/ismael-soto/Documents/GitHub/Iberia_NNS/Database/ListNNS.Iberia.xlsx", sheet = 2)
+ib <- read_xlsx("/home/ismael-soto/Desktop/ELZA/Iberia/Database/ListNNS.Iberia.xlsx", sheet = 2)
 
 unique(ib$Double_check_by)
 
 fix <- c(
   "EmiliGB" = "EmiliGB",
+  "Cesar" = "Cesar",
   "IS" = "IS",
+  "IS, Javier O." = "IS, Javier O.",
+ "IS, Cesar, Javier O." = "IS, Cesar, Javier O.",
+ "IS,Cesar"  = "IS, Cesar" ,
   "Sergio; Carolina MM" = "Sergio, Carolina MM",
   "IS; CMM" = "IS, Carolina MM",
   "Sergio; CMM" = "Sergio, Carolina MM",
   "Carlos CB; CMM" = "Carlos CB, Carolina MM",
   "Carolina MM" = "Carolina MM",
   "Sergio" = "Sergio",
+  "Sergio, Cesar" = "Sergio, Cesar",
   "RSousa" = "RSousa",
   "RSousa, EGB" = "RSousa, EmiliGB",
   "IS, FRAN" = "IS, FRAN",
@@ -37,11 +42,13 @@ order <- ib %>% group_by(Double_check_by) %>% summarise(n = n()) %>% arrange(des
 
 ### ORDER:
 
-1 IS               3240
-2 RSousa             87
-3 EmiliGB            75
-4 Carolina MM        40
-5 Sergio             35
-6 Carlos CB          15
-7 NA                  5
-8 FRAN                2
+ 1 IS               3340
+ 2 Cesar             126
+ 3 RSousa             87
+ 4 EmiliGB            75
+ 5 Carolina MM        40
+ 6 Sergio             35
+ 7 Javier O.          18
+ 8 Carlos CB          15
+ 9 NA                  5
+10 FRAN                2
