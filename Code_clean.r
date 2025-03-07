@@ -24,6 +24,7 @@ head(df)
 df = df %>% filter(Country %in% c('Spain', 'Portugal', 'Andorra', 'Gibraltar'))
 names(df)
 
+df = df[!duplicated(df[,c('Country','LastSpeciesName')]), ]
 
 # Check GBIF backbone: ----------
 source(GBIF.FROV.r) # done in this code
@@ -251,47 +252,53 @@ options(browser = "/snap/bin/chromium")
 
 
 ### Figure 2: -----
-country = unique(df.hab$Location)
-c = 'Gibraltar'
-col <- c("FRESHWATER" = "#35e521", "MARINE" = "#2616bb", 
-         "TERRESTRIAL" = "#af9b26")
-plots= list()
-for(c in country) {
-  df.hab1 <- df.hab[df.hab$Location ==c, ]
+# Overlap of species composition: 
+unique(df$Country)
+world <- ne_countries(scale = "medium", returnclass = "sf") 
+es<- geodata::gadm(
+    country = c("ES"),level = 1, path = getwd() ) %>%
+    sf::st_as_sf() %>%
+    sf::st_cast("MULTIPOLYGON")  %>% 
+    filter(!NAME_1 %in% c("Islas Baleares","Islas Canarias", "Ceuta y Melilla", "Azores", "Madeira"))
+pt<- geodata::gadm(
+    country = c("PT"),level = 1, path = getwd() ) %>%
+    sf::st_as_sf() %>%
+    sf::st_cast("MULTIPOLYGON") %>% 
+    filter(!NAME_1 %in% c("Islas Baleares","Islas Canarias", "Ceuta y Melilla", "Azores", "Madeira"))
+ad<-  world[world$name=="Andorra",]
+world_states <- ne_states(returnclass = "sf")
+gb <- world_states[world_states$name == "Gibraltar", ]
 
-  shape <- ne_states(returnclass = "sf")
-  shape <- shape[shape$admin == c, ]
-  
-  if(c =="Spain"){
-  shape <- shape[!shape$name %in% c("Ceuta","Melilla","Santa Cruz de Tenerife","Las Palmas","Baleares") ,  ]
-  } else if(c =="Portugal"){
-    shape <- shape[!shape$name %in% c("Azores","Madeira") ,  ]
-  } 
-  
-  #shape <- ne_countries(scale = "medium", country = c, returnclass = "sf")
+plot(gb)
+col <- c("Spain" = "#F56455FF", "Portugal" = "#206a0c", 
+         "Andorra" = "#cfc90e",  "Gibraltar" = "#ccc6c6")
+
+shared_species
+c <- "Gibraltar"
+plots = list()
+for(c in unique(df$Country)){
+  shared <- shared_species[shared_species$Location1==c,]
+  shared <- shared[,c(-7)]
+  if(c=="Spain"){
+    shape <- es
+  } else if(c=="Portugal"){
+    shape <- pt
+  } else if(c=="Andorra"){
+    shape <- ad
+  } else if(c=="Gibraltar"){
+    shape <- gb
+  }
   shape <- st_transform(shape, crs = st_crs(4326))
-  plot(shape)
-  
   combined_geometry <- st_union(shape)
   combined_shape <- st_sf(geometry = st_sfc(combined_geometry), crs = st_crs(shape))
   plot(combined_shape, col = NA, border = "black")
-  
-  
-  # if (c == "Spain") {
-  #  mainland_bbox <- st_bbox(c(xmin = -9.5, ymin = 35.0, xmax = 3.3, ymax = 44.0), crs = st_crs(shape))
-  #  shape <- st_crop(shape, mainland_bbox)
-  #} else if (c == "Portugal") {
-  #  mainland_bbox <- st_bbox(c(xmin = -9.5, ymin = 36.5, xmax = -6.2, ymax = 42.2), crs = st_crs(shape))
-  # shape <- st_crop(shape, mainland_bbox)
-  #}
-  
-  if(c=="Spain"){
+ 
+ if(c=="Spain"){
     size= 0.3
   } else if(c=="Portugal"){ size= 0.2}else if(c=="Andorra"){ 
     size= 0.01}else if(c=="Gibraltar"){ 
       size= 0.001}
-  
-  grid <- st_make_grid(combined_shape, cellsize = size,  square = TRUE)
+grid <- st_make_grid(combined_shape, cellsize = size,  square = TRUE)
   grid_sf <- st_as_sf(grid)
   grid_sf <- grid_sf[st_intersects(grid_sf, combined_shape, sparse = FALSE), ]
 
@@ -299,46 +306,64 @@ for(c in country) {
   grid_sf <- grid_sf %>%  mutate(grid_id = 1:n())
   
   total_grids <- nrow(grid_sf)
-  df.hab1$proportion <- df.hab1$n / sum(df.hab1$n)
-  df.hab1$grid_count <- round(df.hab1$proportion * total_grids)
-  df.hab1$grid_count[which.max(df.hab1$grid_count)] <- 
-    total_grids - sum(df.hab1$grid_count[-which.max(df.hab1$grid_count)])
-  
-  categories <- unlist(mapply(rep, df.hab1$Habitat, df.hab1$grid_count))
-  grid_sf$Habitat <- categories
-  
+
+if(c %in% c('Andorra', 'Gibraltar')){
+shared$proportion <- shared$Overlap1_to_2 / sum(shared$Overlap1_to_2)
+shared$grid_count <- round(shared$proportion * total_grids)
+shared$grid_count[which.max(shared$grid_count)] <- 
+  total_grids - sum(shared$grid_count[-which.max(shared$grid_count)])
+categories <- unlist(mapply(rep, shared$Location2, shared$grid_count))
+
+  grid_sf$Country <- categories
+} else{
+  z = 100- sum(shared$Overlap1_to_2)
+  shared =  rbind(shared, data.frame(Location1 = c, Location2 = c,Shared = 0, Total1 = 0, Total2 = 0, Overlap1_to_2 = z))
+  shared$proportion <- shared$Overlap1_to_2 /100
+  shared$grid_count <- round(shared$proportion * total_grids)
+  shared$grid_count[which.max(shared$grid_count)] <- 
+    total_grids - sum(shared$grid_count[-which.max(shared$grid_count)])
+
+  categories <- unlist(mapply(rep, shared$Location2, shared$grid_count))
+  grid_sf$Country <- categories
+}
+text_box_x <- st_bbox(es)$xmax - 1.7
+text_box_y <- st_bbox(es)$ymax - 1.35
+shared_text <- paste0(shared$Location2, ": ", round(shared$Overlap1_to_2, 2), "%")
+
   p1<- ggplot() +
-    geom_sf(data = grid_sf, aes(fill = Habitat), color = "black") +
+    geom_sf(data = grid_sf, aes(fill = Country), color = "black") +
     geom_sf(data = combined_shape, fill = NA, color = "black") +  
     scale_fill_manual(values = col) + 
     theme_void() +
-    labs(fill = "Habitat") +
+    labs(fill = "Country") +
     theme(
       legend.position = "right",
       legend.text = element_text(size = 10),
       legend.title = element_text(size = 12)  )
   p1
   plots[[c]] =p1
-  }
-
+}
 library(patchwork)
-(plots[["Spain"]] + plots[["Portugal"]]) / 
+p=(plots[["Spain"]] + plots[["Portugal"]]) / 
   (plots[["Andorra"]] + plots[["Gibraltar"]]) + 
-  plot_layout(heights = c(2, 1)) 
-ggsave(plot= last_plot(), filename = "habitat.svg", device= "svg")
+  plot_layout(heights = c(2, 0.8)) 
+
+#Andri palette?
+ggsave(plot= p, filename = "Shared.species.svg", device= "svg")
+
 
 ### Pathways of introduction -----
 
-unique(df$Pathway_refined)
-table(df$Pathway_refined)
+unique(df$Pathway)
+table(df$Pathway)
+df %>% filter(Pathway != "NA") %>% distinct(LastSpeciesName)  %>% nrow() 
+df %>% filter(grepl("_", Pathway)) %>% distinct(LastSpeciesName)  %>% nrow() 
 
-df %>% filter(grepl("_", Pathway_refined)) %>%  distinct(New_names)  %>% nrow() 
+df1 = df %>% separate_rows(Pathway, sep= '_') %>% filter(!is.na(Pathway))
+df1 = df1[!df1$Pathway == 'NA',]
+table(df1$Pathway)
 
-df1 = df %>% separate_rows(Pathway_refined, sep= '_') %>% filter(!is.na(Pathway_refined))
-df1 = df1[!df1$Pathway_refined == 'NA',]
-table(df1$Pathway_refined)
-
-a= df1 %>% group_by(Location,Pathway_refined) %>% summarise(Species= n_distinct(New_names)) %>% arrange(-Species)
+a= df1 %>% group_by(Country,Pathway) %>% summarise(Species= n_distinct(LastSpeciesName)) %>% arrange(-Species)
 
 ### Figure 3: -----
 pacman::p_load(ggalluvial, ggrepel, patchwork)
@@ -348,26 +373,27 @@ group_colors <- c(
   "Fungi" = "#b1d634", "Insects" = "#b3b3b3", "Mammals" = "#e5c494",
   "Microorganisms" = "#72c6b1", "Molluscs" = "#fb9a99", "Reptiles" = "#dd1a1a",
   "Vascular plants" = "#76b379", "Other invertebrates" = "#cab2d6")
-  path <- "#cccccc"
+path <- "#cccccc"
 
 plots <-list()
+# I also need to run this plot in windows:
 con = 'Spain'
 for(con in c("Spain","Portugal","Gibraltar", "Andorra")) {
- 
- df2 <- df1[df1$Location ==con, ]
- df2= df2 %>% group_by(Group,Pathway_refined) %>% summarise(n= n_distinct(New_names)) %>% arrange(-n)
+ colnames(df1)[3] = 'Group'
+ df2 <- df1[df1$Country ==con, ]
+ df2= df2 %>% group_by(Group,Pathway) %>% summarise(n= n_distinct(LastSpeciesName)) %>% arrange(-n)
 
- nodes <- data.frame(name = unique(c(df2$Group, df2$Pathway_refined)))
+ nodes <- data.frame(name = unique(c(df2$Group, df2$Pathway)))
 
 df2 <- df2 %>%
   mutate(
     source = match(Group, nodes$name) - 1,
-    target = match(Pathway_refined, nodes$name) - 1,
+    target = match(Pathway, nodes$name) - 1,
     color = group_colors[Group])
 
 node_colors <- c(
   group_colors[unique(df2$Group)],
-  rep("#cccccc", length(unique(df2$Pathway_refined))))
+  rep("#cccccc", length(unique(df2$Pathway))))
 
 p <- plot_ly(
   type = "sankey",
@@ -390,23 +416,25 @@ df1 <- df[!df$Native_range =="NA", ]
 df2 <- df1 %>% separate_rows(Native_range, sep = "_") %>% filter(!is.na(Native_range))
 
 table(df2$Native_range)
-a= df2 %>% group_by(Location, Native_range) %>% summarise(n= n_distinct(New_names)) %>% arrange(-n)
+df2$Native_range[df2$Native_range=='neot'] ='neotropic'
+df2$Native_range[df2$Native_range=='afrotorpic'] ='afrotropic'
 
+df2 %>% group_by(Native_range) %>% summarise(n= n_distinct(LastSpeciesName)) %>% arrange(-n)
+a= df2 %>% group_by(Country, Native_range) %>% summarise(n= n_distinct(LastSpeciesName)) %>% arrange(-n)
 
-## Figure 2
 range(a$n)
+
 # better to fix in Inkscape
-b <- df[df$Group=="Fishes", ]
 
 ### Temporal trends ------
 list.files()
 df1 = read_xlsx("./Database/All.First.records.xlsx")
 df1 <- df1[df1$ISO3 %in% c("ESP", "PRT", "AND","GIB"), ]
 df1 <- df1[df1$Native=="FALSE", ]
-df1 <- df1[!df1$Source=="Not dated", ]
 df1 = df1 %>% filter(!is.na(df1$year))
 df1 = df1 %>% filter(year < 2024 & year >0)
-df1 <- df1[df1$usageKey %in% df$GIATAR_key, ]
+df1 <- df1[df1$usageKey %in% df$GBIF_key, ]
+df1 <- df1[!df1$Source=="Not dated", ]
 
 df1$ISO3[df1$ISO3 =="ESP"] ="Spain"
 df1$ISO3[df1$ISO3 =="AND"] ="Andorra"
@@ -433,22 +461,17 @@ res_comb_cum <-  df1 %>%
   summarise(n = n(), .groups = "drop") %>% arrange(year) %>%  
   mutate(cumulative_records = cumsum(n))%>% mutate(ISO3="comb")
 
-background <- data.frame(
-  xmin = seq(1500, 2050, by = 50),
-  xmax = seq(1550, 2100, by = 50),
-  fill = rep(c("grey70", "white"), length.out = length(seq(1500, 2050, by = 50))))
 
 location_colors <- c(
   "Spain" = "#ff7f00",
   "Portugal" = "#33a02c", 
   "Andorra" = "#e31a1c", 
   "Gibraltar" = "#1f78b4")
-
+location_colors = col
 
 p1 = ggplot(res_anual, aes(x = year, y = n, color = ISO3, group = ISO3)) +
-  geom_rect(data = background, aes(xmin = xmin, xmax = xmax, ymin = -Inf, ymax = Inf, fill = fill),
-            inherit.aes = FALSE, alpha = 0.5) + ylim(0,30)+  xlim(1700,2025)+
-  scale_x_continuous(breaks = c(1700,1800,1900,2000,2023), limits = c(1700, 2023))+
+  ylim(0,30)+  xlim(1500,2025)+
+  scale_x_continuous(breaks = c(1500,1600,1700,1800,1900,2000,2023), limits = c(1500, 2023))+
   theme_bw(base_size = 12) + coord_cartesian(clip = 'on')+
   geom_point(size = 2, alpha=0.35) + scale_fill_manual(values = c("grey70" = "lightgrey", "white" = "white"), guide = "none")+
   scale_color_manual(values = location_colors) +
@@ -459,7 +482,9 @@ p1 = ggplot(res_anual, aes(x = year, y = n, color = ISO3, group = ISO3)) +
     color = "Location",  fill = "Location") +
   theme(
     axis.title = element_text(face = "bold"),
-    legend.position = c(0.08, 0.8), # Place legend inside the plot
+ panel.grid.minor.y = element_blank(),
+  panel.grid.mayor.y = element_blank(),
+     legend.position = c(0.08, 0.8), 
     legend.background = element_rect(fill = alpha("white", 0.4), color = "black", size = 0.5),
     axis.text = element_text(size = 12),
     plot.title = element_text(hjust = 0.5, size = 16, face = "bold")) +
@@ -478,8 +503,7 @@ p1 = ggplot(res_anual, aes(x = year, y = n, color = ISO3, group = ISO3)) +
 p1
 
 p2= ggplot(res_cum, aes(x = year, y = cumulative_records, color = ISO3, group = ISO3)) +
-  geom_rect(data = background, aes(xmin = xmin, xmax = xmax, ymin = -Inf, ymax = Inf, fill = fill),
-            inherit.aes = FALSE, alpha = 0.5) +  scale_x_continuous(breaks = c(1700,1800,1900,2000,2023), limits = c(1700, 2023))+
+ scale_x_continuous(breaks = c(1500,1600,1700,1800,1900,2000,2023), limits = c(1500, 2023))+
   theme_bw(base_size = 12) + coord_cartesian(clip = 'on')+
   scale_fill_manual(values = c("grey70" = "lightgrey", "white" = "white"), guide = "none") +
   scale_color_manual(values = location_colors) +
@@ -490,11 +514,13 @@ p2= ggplot(res_cum, aes(x = year, y = cumulative_records, color = ISO3, group = 
     color = "Location",  fill = "Location") +
   theme(
     axis.title = element_text(face = "bold"),
+     panel.grid.minor.y = element_blank(),
+  panel.grid.mayor.y = element_blank(),
     legend.position = c(0.08, 0.8), # Place legend inside the plot
     legend.background = element_rect(fill = alpha("white", 0.4), color = "black", size = 0.5),
     axis.text = element_text(size = 12),
     plot.title = element_text(hjust = 0.5, size = 16, face = "bold")) + 
-  xlim(1700,2025)+
+  xlim(1500,2025)+
   scale_x_continuous(breaks = c(1700,1800,1900,2000,2023), limits = c(1700, 2023))+
   annotate("text", x = 1800, y = 300, label = "Industrial Revolution\n(1760–1840)", size = 3.5, color = "black") +
   annotate("text", x = 2014, y = 300, label = "EU Regulation\n1143/2014", size = 3.5, color = "black") +
@@ -507,10 +533,10 @@ p2= ggplot(res_cum, aes(x = year, y = cumulative_records, color = ISO3, group = 
   #         curvature = 0.2, arrow = arrow(length = unit(0.2, "cm")), color = "black") +
   #geom_curve(x = 1986, y = 19, xend = 1975, yend = 15, 
   #          curvature = -0.2, arrow = arrow(length = unit(0.2, "cm")), color = "black")
-
+p2
 library(patchwork)
-p1+p2
-ggsave(plot=last_plot(), filename = "temporal.svg", device = "svg")
+p=p1+p2
+ggsave(plot=p, filename = "temporal.svg", device = "svg")
 
 ### Spatial GBIF  -----
 # The extraction occ are running in the FROV PC (see GBIF.FROV.r)

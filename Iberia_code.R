@@ -138,9 +138,9 @@ for(country in unique(df$Location)){
     pred("occurrenceStatus","PRESENT"),
     pred_not(pred_in("basisOfRecord",c("FOSSIL_SPECIMEN"))),
     pred("hasCoordinate", TRUE),
-    user = "ismaelsoto",
-    pwd = "Ismaputas123.",
-    email = "isma-sa@hotmail.com"
+    user = "*",
+    pwd = "**",
+    email = "*-*@*"
   )
     status <- occ_download_meta(x)$status
     
