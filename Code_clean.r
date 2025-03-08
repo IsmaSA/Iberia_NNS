@@ -107,7 +107,8 @@ unique(df$'Taxonomic group')
 
 df$'Taxonomic group'[df$'Taxonomic group' =="mammals"] <- "Mammals"
 df$'Taxonomic group'[df$'Taxonomic group' =="Amphibia"] <- "Amphibians"
-df$'Taxonomic group'[df$'Taxonomic group' =="Insects"] <- "Insect"
+df$'Taxonomic group'[df$'Taxonomic group' =="Insects"] <- "Insects"
+df$'Taxonomic group'[df$'Taxonomic group' =="Aves"] <- "Birds"
 
 
 df %>% group_by(df$'Taxonomic group') %>% summarise(Species = n_distinct(LastSpeciesName)) %>% arrange(-Species)
@@ -427,13 +428,16 @@ range(a$n)
 # better to fix in Inkscape
 
 ### Temporal trends ------
+### Temporal trends ------
+iberia
+
 list.files()
 df1 = read_xlsx("./Database/All.First.records.xlsx")
 df1 <- df1[df1$ISO3 %in% c("ESP", "PRT", "AND","GIB"), ]
 df1 <- df1[df1$Native=="FALSE", ]
 df1 = df1 %>% filter(!is.na(df1$year))
 df1 = df1 %>% filter(year < 2024 & year >0)
-df1 <- df1[df1$usageKey %in% df$GBIF_key, ]
+df1 <- df1[df1$usageKey %in% iberia$usageKey, ] # Use the keys from GIATAR (potentially same as GBIF)
 df1 <- df1[!df1$Source=="Not dated", ]
 
 df1$ISO3[df1$ISO3 =="ESP"] ="Spain"
@@ -482,9 +486,9 @@ p1 = ggplot(res_anual, aes(x = year, y = n, color = ISO3, group = ISO3)) +
     color = "Location",  fill = "Location") +
   theme(
     axis.title = element_text(face = "bold"),
- panel.grid.minor.y = element_blank(),
-  panel.grid.mayor.y = element_blank(),
-     legend.position = c(0.08, 0.8), 
+    panel.grid.minor.y = element_blank(),
+    panel.grid.mayor.y = element_blank(),
+    legend.position = c(0.08, 0.8), 
     legend.background = element_rect(fill = alpha("white", 0.4), color = "black", size = 0.5),
     axis.text = element_text(size = 12),
     plot.title = element_text(hjust = 0.5, size = 16, face = "bold")) +
@@ -493,17 +497,17 @@ p1 = ggplot(res_anual, aes(x = year, y = n, color = ISO3, group = ISO3)) +
   annotate("text", x = 1986, y = 20, label = "Spain and Portugal\n join EU\n (1986)", size = 3.5, color = "black") +
   # Add curved arrows
   geom_vline(xintercept = c(1800, 1986, 2014), linetype = "dashed", color = "grey50", size = 0.5, alpha=0.5) 
-  # geom_curve(x = 1800, y = 19, xend = 1760, yend = 15, 
-             #          curvature = 0.2, arrow = arrow(length = unit(0.2, "cm")), color = "black") +
-  #geom_curve(x = 2014, y = 24, xend = 2000, yend = 20, 
-             #           curvature = 0.2, arrow = arrow(length = unit(0.2, "cm")), color = "black") +
-  # geom_curve(x = 1986, y = 19, xend = 1975, yend = 15, 
- #            curvature = -0.2, arrow = arrow(length = unit(0.2, "cm")), color = "black")
+# geom_curve(x = 1800, y = 19, xend = 1760, yend = 15, 
+#          curvature = 0.2, arrow = arrow(length = unit(0.2, "cm")), color = "black") +
+#geom_curve(x = 2014, y = 24, xend = 2000, yend = 20, 
+#           curvature = 0.2, arrow = arrow(length = unit(0.2, "cm")), color = "black") +
+# geom_curve(x = 1986, y = 19, xend = 1975, yend = 15, 
+#            curvature = -0.2, arrow = arrow(length = unit(0.2, "cm")), color = "black")
 
 p1
 
 p2= ggplot(res_cum, aes(x = year, y = cumulative_records, color = ISO3, group = ISO3)) +
- scale_x_continuous(breaks = c(1500,1600,1700,1800,1900,2000,2023), limits = c(1500, 2023))+
+  scale_x_continuous(breaks = c(1500,1600,1700,1800,1900,2000,2023), limits = c(1500, 2023))+
   theme_bw(base_size = 12) + coord_cartesian(clip = 'on')+
   scale_fill_manual(values = c("grey70" = "lightgrey", "white" = "white"), guide = "none") +
   scale_color_manual(values = location_colors) +
@@ -514,29 +518,31 @@ p2= ggplot(res_cum, aes(x = year, y = cumulative_records, color = ISO3, group = 
     color = "Location",  fill = "Location") +
   theme(
     axis.title = element_text(face = "bold"),
-     panel.grid.minor.y = element_blank(),
-  panel.grid.mayor.y = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    panel.grid.mayor.y = element_blank(),
     legend.position = c(0.08, 0.8), # Place legend inside the plot
     legend.background = element_rect(fill = alpha("white", 0.4), color = "black", size = 0.5),
     axis.text = element_text(size = 12),
     plot.title = element_text(hjust = 0.5, size = 16, face = "bold")) + 
   xlim(1500,2025)+
-  scale_x_continuous(breaks = c(1700,1800,1900,2000,2023), limits = c(1700, 2023))+
+  scale_x_continuous(breaks = c(1500,1600,1700, 1800,1900,2000,2023), limits = c(1500, 2023))+
   annotate("text", x = 1800, y = 300, label = "Industrial Revolution\n(1760–1840)", size = 3.5, color = "black") +
   annotate("text", x = 2014, y = 300, label = "EU Regulation\n1143/2014", size = 3.5, color = "black") +
   annotate("text", x = 1986, y = 300, label = "Spain and Portugal\njoin EU", size = 3.5, color = "black") +
   # Add curved arrows
   geom_vline(xintercept = c(1800, 1986, 2014), linetype = "dashed", color = "grey50", size = 0.5, alpha=0.5) 
-  #  geom_curve(x = 1800, y = 19, xend = 1760, yend = 15, 
-  #        curvature = 0.2, arrow = arrow(length = unit(0.2, "cm")), color = "black") +
-  #geom_curve(x = 2014, y = 24, xend = 2000, yend = 20, 
-  #         curvature = 0.2, arrow = arrow(length = unit(0.2, "cm")), color = "black") +
-  #geom_curve(x = 1986, y = 19, xend = 1975, yend = 15, 
-  #          curvature = -0.2, arrow = arrow(length = unit(0.2, "cm")), color = "black")
+#  geom_curve(x = 1800, y = 19, xend = 1760, yend = 15, 
+#        curvature = 0.2, arrow = arrow(length = unit(0.2, "cm")), color = "black") +
+#geom_curve(x = 2014, y = 24, xend = 2000, yend = 20, 
+#         curvature = 0.2, arrow = arrow(length = unit(0.2, "cm")), color = "black") +
+#geom_curve(x = 1986, y = 19, xend = 1975, yend = 15, 
+#          curvature = -0.2, arrow = arrow(length = unit(0.2, "cm")), color = "black")
 p2
 library(patchwork)
 p=p1+p2
+p
 ggsave(plot=p, filename = "temporal.svg", device = "svg")
+
 
 ### Spatial GBIF  -----
 # The extraction occ are running in the FROV PC (see GBIF.FROV.r)
@@ -976,38 +982,6 @@ ggsave(last_plot(), filename = "Venn.svg", device = "svg")
 
 
 
-## Fig S2. Grous  -------
-
-head(df)
-df$Group[df$Group =="Dinoflagellata"] <- "Microorganisms"
-df$Group[df$Group =="Viruses"] <- "Microorganisms"
-df$Group[df$Group =="Bacteria and protozoans"] <- "Microorganisms"
-df$Group[df$Group =="Microorganism"] <- "Microorganisms"
-df$Group[df$Group =="Microorganism"] <- "Microorganisms"
-df$Group[df$Group =="mammals"] <- "Mammals"
-df$Group[df$Group =="Invertebrates (excl. Arthropods, Molluscs)"] <- "Other invertebrates"
-df$Group[df$Group =="Arthropods p.p. (Myriapods, Diplopods etc.)"] <- "Other invertebrates"
-
-group_colors <- c(
-  "Algae" = "#913003", "Amphibians" = "#7bc810", "Birds" = "#dae93d",
-  "Bryophytes" = "#e78ac3", "Crustaceans" = "#a471ed", "Fishes" = "#8399e7",
-  "Fungi" = "#b1d634", "Insects" = "#b3b3b3", "Mammals" = "#e5c494",
-  "Microorganisms" = "#72c6b1", "Molluscs" = "#fb9a99", "Reptiles" = "#dd1a1a",
-  "Vascular plants" = "#76b379", "Other invertebrates" = "#cab2d6")
-
-df1= df %>% group_by(Location, Group) %>% summarise(n = n()) %>% mutate(
-  Location = factor(Location, levels = c("Spain", "Portugal", "Andorra", "Gibraltar")) )
-
-unique(df1$Group)
-
-ggplot(df1, aes(Group, n, fill = Group)) + geom_bar(stat = "identity",size= 0.2, color ="black")+
-  facet_wrap(vars(Location), scales = "free_y") +
-  scale_fill_manual(values = group_colors) +
-  theme_bw() +  labs(x="", y="")+scale_x_reordered() +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1),
-    strip.text = element_text(face = "bold"),
-    legend.position = "none")
 
 
 ## Fig S3. Spatial data normalised  -------
