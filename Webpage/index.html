@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Established non-native species in the Iberian Peninsula</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Map Section -->
+        <div class="map-section">
+            <h1>Established non-native species in the Iberian Peninsula</h1>
+            <p>Established non-native species: Refer to those non-native species that have established self-sustaining populations in the wild <a href="https://doi.org/10.1111/brv.13071" target="_blank">(Soto et al., 2024)</a></p>
+            <p>Explore occurrence points downloaded from GBIF </p>
+            <div id="map"></div>
+        </div>
+    </div>
+
+    <!-- Leaflet.js and Map Script -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Initialize the map centered on the Iberian Peninsula
+        var map = L.map('map', {
+            center: [40.0, -4.0],
+            zoom: 6,
+            layers: [] // We'll add layers manually
+        });
+
+        // Base Layer: OpenStreetMap
+        var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 18
+        }).addTo(map);
+
+        // Additional Layer: OpenTopoMap (Topographic)
+        var topoLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+            attribution: '© <a href="https://opentopomap.org">OpenTopoMap</a> (CC-BY-SA)',
+            maxZoom: 17,
+            opacity: 0.8
+        });
+
+       // Replace this:
+var occurrencePoints = [
+    // From Iberia_AD.rds
+    { lat: <decimalLatitude>, lng: <decimalLongitude>, title: "<Andorra>", desc: "<your_desc_from_AD>" },
+    // From Iberia_ES.rds
+    { lat: <decimalLatitude>, lng: <decimalLongitude>, title: "<Spain>", desc: "<your_desc_from_ES>" },
+];
+
+// With this:
+var occurrencePoints = [
+    // Sample data for testing
+    { lat: 42.5063, lng: 1.5218, title: "Andorra", desc: "Sample occurrence in Andorra" },
+    { lat: 40.4168, lng: -3.7038, title: "Spain", desc: "Sample occurrence in Madrid, Spain" },
+    { lat: 41.3851, lng: 2.1734, title: "Spain", desc: "Sample occurrence in Barcelona, Spain" }
+];
+
+
+        var markers = L.layerGroup();
+        occurrencePoints.forEach(function(point) {
+            L.marker([point.lat, point.lng])
+                .bindPopup(`<b>${point.title}</b><br>${point.desc}`)
+                .addTo(markers);
+        });
+        markers.addTo(map);
+
+        // Iberian Peninsula Polygon Layer (Approximate Outline)
+        var iberianPeninsulaCoords = [
+            [43.5, -9.3],  // Northwest (Galicia)
+            [43.5, -1.5],  // Northeast (Pyrenees)
+            [40.5, 3.0],   // East (Valencia)
+            [36.0, -5.5],  // South (Gibraltar)
+            [37.0, -9.5]   // Southwest (Portugal)
+        ];
+        var iberianPolygon = L.polygon(iberianPeninsulaCoords, {
+            color: '#ff7800',
+            weight: 2,
+            opacity: 0.8,
+            fillOpacity: 0.1
+        }).addTo(map);
+
+        // Layer Control
+        var baseLayers = {
+            "OpenStreetMap": osmLayer,
+            "OpenTopoMap": topoLayer
+        };
+        var overlayLayers = {
+            "Occurrence Points": markers,
+            "Iberian Peninsula Outline": iberianPolygon
+        };
+        L.control.layers(baseLayers, overlayLayers).addTo(map);
+    </script>
+</body>
+</html>
