@@ -332,7 +332,7 @@ for(c in country){
       name = "Number of species") +
     theme_void() +
     #labs(fill = "Number of species") +
-    geom_sf(data = cities2, color = "black", size = 0.8) +  # Add city points
+    geom_sf(data = cities2, color = "black", size = 0.8) +  
     geom_sf_text(data = cities2, aes(label = city), color = "black", 
                  size = 3, fontface = "bold", nudge_y = 0.03) +
     theme(

@@ -42,22 +42,12 @@
             opacity: 0.8
         });
 
-       // Replace this:
-var occurrencePoints = [
-    // From Iberia_AD.rds
-    { lat: <decimalLatitude>, lng: <decimalLongitude>, title: "<Andorra>", desc: "<your_desc_from_AD>" },
-    // From Iberia_ES.rds
-    { lat: <decimalLatitude>, lng: <decimalLongitude>, title: "<Spain>", desc: "<your_desc_from_ES>" },
-];
-
-// With this:
-var occurrencePoints = [
-    // Sample data for testing
-    { lat: 42.5063, lng: 1.5218, title: "Andorra", desc: "Sample occurrence in Andorra" },
-    { lat: 40.4168, lng: -3.7038, title: "Spain", desc: "Sample occurrence in Madrid, Spain" },
-    { lat: 41.3851, lng: 2.1734, title: "Spain", desc: "Sample occurrence in Barcelona, Spain" }
-];
-
+        // Sample data for testing
+        var occurrencePoints = [
+            { lat: 42.5063, lng: 1.5218, title: "Andorra", desc: "Sample occurrence in Andorra" },
+            { lat: 40.4168, lng: -3.7038, title: "Spain", desc: "Sample occurrence in Madrid, Spain" },
+            { lat: 41.3851, lng: 2.1734, title: "Spain", desc: "Sample occurrence in Barcelona, Spain" }
+        ];
 
         var markers = L.layerGroup();
         occurrencePoints.forEach(function(point) {
