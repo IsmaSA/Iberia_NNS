@@ -100,21 +100,40 @@
 
         loadJsonData('Iberia_AD.json', speciesClusters["Andorra"]);
         loadJsonData('Iberia_GI.json', speciesClusters["Gibraltar"]);
-        loadJsonData('Iberia_ES.json', speciesClusters["Spain"]);   // Add Spain dataset
-        loadJsonData('Iberia_PT.json', speciesClusters["Portugal"]); // Add Portugal dataset
 
-        fetch('https://your_cdn_link/spain_data.geojson')  // Replace with your GeoJSON URL
-    .then(response => response.json())
-    .then(data => {
-        L.geoJSON(data, {
-            onEachFeature: function (feature, layer) {
-                layer.bindPopup(`<b>Species:</b> ${feature.properties.species}`);
-            }
-        }).addTo(map);
-    })
-    .catch(error => console.error('Error loading GeoJSON:', error));
-
-    
+        function loadJsonDataFromZenodo(fileUrl, clusterGroup) {
+            console.log(`Fetching data from: ${fileUrl}`); // Debugging
+            fetch(fileUrl, { cache: "no-cache" })  // Prevents browser caching issues
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Failed to load ${fileUrl}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log(`Loaded data:`, data); // Debugging
+                    if (Array.isArray(data)) {
+                        console.log(`Loaded ${data.length} points from Zenodo`); // Debugging
+                        data.forEach(point => {
+                            if (point.decimalLatitude && point.decimalLongitude) {
+                                var marker = L.marker([point.decimalLatitude, point.decimalLongitude])
+                                    .bindPopup(`<b>Species:</b> ${point.species}`);
+                                clusterGroup.addLayer(marker);
+                            } else {
+                                console.warn(`Missing coordinates for point:`, point); // Debugging
+                            }
+                        });
+                        map.addLayer(clusterGroup);
+                    } else {
+                        console.error(`Expected an array but got:`, data); // Debugging
+                    }
+                })
+                .catch(error => console.error(`Error loading ${fileUrl}:`, error));
+        }
+        
+        // Load Portugal JSON from Zenodo
+        loadJsonDataFromZenodo('https://zenodo.org/records/15008998/files/Iberia_PT.json?download=1', speciesClusters["Portugal"]);
+        
         // Layer controls
         var baseLayers = {
             "OpenStreetMap": osmLayer,
