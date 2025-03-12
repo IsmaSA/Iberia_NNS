@@ -28,19 +28,19 @@
   <div class="download-container">
     <div class="download-box">
         <h3>Andorra</h3>
-        <a href="data/Iberia_AD.json" download>Download</a>
+        <a href="root/Iberia_AD.json" download>Download</a>
     </div>
     <div class="download-box">
         <h3>Gibraltar</h3>
-        <a href="data/Iberia_GI.json" download>Download</a>
+        <a href="root/Iberia_GI.json" download>Download</a>
     </div>
     <div class="download-box">
         <h3>Spain</h3>
-        <a href="data/Iberia_ES.json" download>Download</a>
+        <a href="root/Iberia_ES.json" download>Download</a>
     </div>
     <div class="download-box">
         <h3>Portugal</h3>
-        <a href="data/Iberia_PT.json" download>Download</a>
+        <a href="root/Iberia_PT.json" download>Download</a>
     </div>
 </div>
 <div class="footer">
@@ -49,10 +49,8 @@
     </div>
 
     <script>
-        // Initialize the map
         var map = L.map('map').setView([40.0, -3.7], 6);  // Centered on Iberia
 
-        // Base Layers
         var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; OpenStreetMap contributors'
         });
