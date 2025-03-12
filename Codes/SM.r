@@ -362,3 +362,24 @@ final_plot
 ggsave(last_plot(), filename = "FigS4.Spatial.svg", device = "svg")  
 
 
+
+
+
+setwd("C:/Users/Propietario/Downloads")
+rds <- readRDS("Iberia_ES.rds")
+rds<- rds[,c(1,7,8)]
+
+chunk_size <- 270000
+total_rows <- nrow(rds)
+num_chunks <- ceiling(total_rows / chunk_size)
+
+for (i in 1:num_chunks) {
+  print(i)
+  start_idx <- (i-1)*chunk_size + 1
+  end_idx   <- min(i*chunk_size, total_rows)
+  
+  chunk_df <- rds[start_idx:end_idx, ]
+  chunk_filename <- paste0("Iberia_ES", i, ".json")
+  
+  jsonlite::write_json(chunk_df, chunk_filename)
+}
