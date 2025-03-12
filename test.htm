@@ -1,77 +1,51 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <!-- Leaflet CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
-  <!-- Leaflet JS -->
+  <meta charset="UTF-8">
+  <title>Portugal Map Test</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css">
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+  <style>
+    #map { width: 100%; height: 600px; }
+  </style>
 </head>
 <body>
-  <div id="map" style="height: 600px;"></div>
 
-  <!-- YOUR SCRIPT BELOW -->
-  <script>
-    // 1) Initialize the map
-    const map = L.map('map').setView([40.0, -3.7], 6);
+<div id="map"></div>
 
-    // 2) Add a base layer (e.g., OSM)
-    const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors'
-    });
-    osmLayer.addTo(map);
+<script>
+  // 1. Initialize the map
+  const map = L.map('map').setView([39.5, -8.0], 7);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
 
-    // 3) Create a marker cluster group for Portugal
-    const portugalCluster = L.markerClusterGroup();
+  // 2. Marker cluster
+  const clusterGroup = L.markerClusterGroup();
 
-    // 4) Define a function to fetch from Zenodo
-    function loadJsonDataFromZenodo(fileUrl, clusterGroup) {
-      fetch(fileUrl, { cache: "no-cache" })
-        .then(response => {
-          if (!response.ok) {
-            throw new Error(`Failed to load ${fileUrl}: ${response.statusText}`);
-          }
-          return response.json();
-        })
-        .then(data => {
-          // Check that data is an array
-          if (!Array.isArray(data)) {
-            console.error("Data is not an array:", data);
-            return;
-          }
+  // 3. Fetch the JSON (same folder as index.html in this example)
+  fetch('https://zenodo.org/records/15008998/files/Iberia_PT.json?download=1', { cache: 'no-cache' })
+    .then(response => response.json())
+    .then(data => {
+      data.forEach(d => {
+        if (d.decimalLatitude && d.decimalLongitude) {
+          const marker = L.marker([d.decimalLatitude, d.decimalLongitude])
+            .bindPopup(`Lat: ${d.decimalLatitude}, Lon: ${d.decimalLongitude}`);
+          clusterGroup.addLayer(marker);
+        }
+      });
+      map.addLayer(clusterGroup);
 
-          // Loop through each record
-          data.forEach(point => {
-            if (point.decimalLatitude && point.decimalLongitude) {
-              const marker = L.marker([point.decimalLatitude, point.decimalLongitude])
-                .bindPopup(`<b>Species:</b> ${point.species}`);
-              clusterGroup.addLayer(marker);
-            }
-          });
-
-          // Add cluster group to map
-          map.addLayer(clusterGroup);
-        })
-        .catch(err => console.error(`Error loading ${fileUrl}: ${err}`));
-    }
-
-    // 5) Actually call the function with your Zenodo link
-    loadJsonDataFromZenodo(
-      'https://zenodo.org/records/15008998/files/Iberia_PT.json?download=1',
-      portugalCluster
-    );
-
-    // OPTIONAL: If you want layer control
-    const baseLayers = {
-      "OpenStreetMap": osmLayer
-    };
-    const overlays = {
-      "Portugal": portugalCluster
-    };
-    L.control.layers(baseLayers, overlays).addTo(map);
-
-  </script>
+      // Optional: fit bounds
+      const bounds = clusterGroup.getBounds();
+      if (bounds.isValid()) {
+        map.fitBounds(bounds);
+      }
+    })
+    .catch(err => console.error('Error:', err));
+</script>
 </body>
 </html>
