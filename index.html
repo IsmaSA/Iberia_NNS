@@ -99,8 +99,49 @@
         loadJsonData('root/Iberia_AD.json', speciesClusters["Andorra"]);
         loadJsonData('root/Iberia_GI.json', speciesClusters["Gibraltar"]);
 
+// Portugal points here ----
+   
+fetch('https://zenodo.org/records/15008998/files/Iberia_PT.json?download=1', { cache: "no-cache" })
+.then(response => {
+  if (!response.ok) {
+    throw new Error(`Could not load file: ${response.statusText}`);
+  }
+  return response.json();
+})
+.then(data => {
+  // data should be an array of objects with decimalLatitude, decimalLongitude
+  if (!Array.isArray(data)) {
+    console.error("Expected an array, but got:", data);
+    return;
+  }
 
-          
+  // 5) Loop through each object and add markers
+  data.forEach(point => {
+    // Only create a marker if lat/lon exist
+    if (point.decimalLatitude && point.decimalLongitude) {
+      const marker = L.marker([point.decimalLatitude, point.decimalLongitude])
+        .bindPopup(`
+          <strong>Species:</strong> ${point.species ? point.species : 'Unknown'}
+          <br>Lat: ${point.decimalLatitude}
+          <br>Lon: ${point.decimalLongitude}
+        `);
+      clusterGroup.addLayer(marker);
+    }
+  });
+
+  // 6) Add the cluster group to the map
+  map.addLayer(clusterGroup);
+
+  // 7) Optionally fit map to the cluster bounds
+  const bounds = clusterGroup.getBounds();
+  if (bounds.isValid()) {
+    map.fitBounds(bounds);
+  }
+})
+.catch(err => console.error("Error loading JSON data:", err));
+
+
+
         // Layer controls
         var baseLayers = {
             "OpenStreetMap": osmLayer,
