@@ -22,6 +22,7 @@
             <p>Explore occurrence points downloaded from GBIF </p>
             <div id="map"></div> 
         </div>
+        <p> Points for Spain and Portugal are limited to enhace data reading, but all points can be downloaded below.</p>
         <p>These points have been used in Soto et al. (XXXX). You can download GBIF points below: </p>
 
          <!-- Download Boxes -->
@@ -67,12 +68,12 @@
         osmLayer.addTo(map);
 
 
-         var speciesClusters = {
-             "Andorra": L.markerClusterGroup(),
-             "Gibraltar": L.markerClusterGroup(),
-             "Spain": L.markerClusterGroup(),
-             "Portugal": L.markerClusterGroup()
-         };
+        const speciesClusters = {
+            "Andorra": L.markerClusterGroup(),
+            "Gibraltar": L.markerClusterGroup(),
+            "Spain": L.markerClusterGroup(),
+            "Portugal": L.markerClusterGroup()
+          };
 
         // Function to load JSON data into clusters
         function loadJsonData(file, clusterGroup) {
@@ -99,48 +100,79 @@
         loadJsonData('root/Iberia_AD.json', speciesClusters["Andorra"]);
         loadJsonData('root/Iberia_GI.json', speciesClusters["Gibraltar"]);
 
+// sampling data ---
+        function randomSample(array, sampleSize) {
+            if (array.length <= sampleSize) return array;  // no need to sample
+          
+            // Then return the first sampleSize elements
+            const shuffled = array.slice(); // copy
+            for (let i = shuffled.length - 1; i > 0; i--) {
+              const j = Math.floor(Math.random() * (i + 1));
+              [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled.slice(0, sampleSize);
+          }
+
+ function loadJsonDataSample(fileUrl, clusterGroup, maxPointsPerChunk) {
+  fetch(fileUrl)
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`Failed to load ${fileUrl}`);
+      }
+      return response.json();
+    })
+    .then(data => {
+      // data should be an array of { decimalLatitude, decimalLongitude, species, ... }
+      if (!Array.isArray(data)) {
+        console.warn("Expected an array but got:", data);
+        return;
+      }
+
+      // 4a) Randomly sample data to e.g. 1,000 points
+      const sampled = randomSample(data, maxPointsPerChunk);
+
+      // 4b) Create markers for the sampled points only
+      sampled.forEach(pt => {
+        if (pt.decimalLatitude && pt.decimalLongitude) {
+          const marker = L.marker([pt.decimalLatitude, pt.decimalLongitude])
+            .bindPopup(`<b>Species:</b> ${pt.species || 'Unknown'}`);
+          clusterGroup.addLayer(marker);
+        }
+      });
+
+      // 4c) Add cluster group to the map
+      map.addLayer(clusterGroup);
+
+      console.log(`File: ${fileUrl} -> loaded ${sampled.length} markers`);
+    })
+    .catch(err => console.error(`Error loading ${fileUrl}:`, err));
+}
+
+
 // Portugal points here ----
-   
-fetch('https://zenodo.org/records/15008998/files/Iberia_PT.json?download=1', { cache: "no-cache" })
-.then(response => {
-  if (!response.ok) {
-    throw new Error(`Could not load file: ${response.statusText}`);
-  }
-  return response.json();
-})
-.then(data => {
-  // data should be an array of objects with decimalLatitude, decimalLongitude
-  if (!Array.isArray(data)) {
-    console.error("Expected an array, but got:", data);
-    return;
-  }
+const chunkUrls = [
+"root/Iberia_PT1.json",
+"root/Iberia_PT2.json",
+"root/Iberia_PT3.json",
+"root/Iberia_PT4.json",
+"root/Iberia_PT5.json",
+"root/Iberia_PT6.json",
+"root/Iberia_PT7.json",
+"root/Iberia_PT8.json",
+"root/Iberia_PT9.json",
+"root/Iberia_PT10.json",
+"root/Iberia_PT11json",
+"root/Iberia_PT12.json",
+"root/Iberia_PT13.json",
+"root/Iberia_PT14.json",
+"root/Iberia_PT15.json",
+"root/Iberia_PT16.json",
+"root/Iberia_PT17.json"
+];
 
-  // 5) Loop through each object and add markers
-  data.forEach(point => {
-    // Only create a marker if lat/lon exist
-    if (point.decimalLatitude && point.decimalLongitude) {
-      const marker = L.marker([point.decimalLatitude, point.decimalLongitude])
-        .bindPopup(`
-          <strong>Species:</strong> ${point.species ? point.species : 'Unknown'}
-          <br>Lat: ${point.decimalLatitude}
-          <br>Lon: ${point.decimalLongitude}
-        `);
-      clusterGroup.addLayer(marker);
-    }
+chunkUrls.forEach(url => {
+    loadJsonDataSample(url, speciesClusters["Portugal"], 1000);
   });
-
-  // 6) Add the cluster group to the map
-  map.addLayer(clusterGroup);
-
-  // 7) Optionally fit map to the cluster bounds
-  const bounds = clusterGroup.getBounds();
-  if (bounds.isValid()) {
-    map.fitBounds(bounds);
-  }
-})
-.catch(err => console.error("Error loading JSON data:", err));
-
-
 
         // Layer controls
         var baseLayers = {
