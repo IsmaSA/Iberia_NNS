@@ -363,8 +363,40 @@ ggsave(last_plot(), filename = "FigS4.Spatial.svg", device = "svg")
 
 
 
+#### Tables:  --------------------
+
+#TableS1 and Table S2: Done manually
+
+# Table S3 -----
+setwd("/home/ismael-soto/Iberia_NNS")
+list.files()
+
+df <- readxl::read_xlsx(path = './Database/GBIF_backbone.xlsx')
+head(df)
+df = df %>% filter(Country %in% c('Spain', 'Portugal', 'Andorra', 'Gibraltar'))
+df = df[!duplicated(df[,c('Country','LastSpeciesName')]), ]
+names(df)
+df1 = df[,c(1,2,14,16,17,3,5:8,10)]
+writexl::write_xlsx(df1, 'TableS3.xlsx')
 
 
+# Table S4 -----
+es = readRDS('/home/ismael-soto/Desktop/ELZA/Iberia/Iberia_ES.rds')
+pt = readRDS('/home/ismael-soto/Desktop/ELZA/Iberia/Iberia_PT.rds')
+gi = readRDS('/home/ismael-soto/Desktop/ELZA/Iberia/Iberia_GI.rds')
+ad = readRDS('/home/ismael-soto/Desktop/ELZA/Iberia/Iberia_AD.rds')
+
+names(gi)
+ib =rbind(es[,c(1,11)],pt[,c(1,11)],gi[,c(1,11)],ad[,c(1,11)])
+a= ib %>% group_by(species) %>% summarise(n = n()) %>% arrange(-n)
+
+names(df1)
+colnames(df1)[6] = 'g'
+a= df1 %>% group_by(LastSpeciesName, g) %>% summarise(n=n())
+
+
+
+# split Spain data
 setwd("C:/Users/Propietario/Downloads")
 rds <- readRDS("Iberia_ES.rds")
 rds<- rds[,c(1,7,8)]
