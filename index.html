@@ -23,7 +23,7 @@
             <div id="map"></div> 
         </div>
         <p> Points for Spain and Portugal are limited to enhace data reading, but all points can be downloaded below.</p>
-        <p>These points have been used in Soto et al. (XXXX). You can download GBIF points below: </p>
+        <p>These points have been used in Soto et al. (XXXX):</p>
 
          <!-- Download Boxes -->
   <div class="download-container">
@@ -36,12 +36,31 @@
         <a href="root/Iberia_GI.json" download>Download</a>
     </div>
     <div class="download-box">
-        <h3>Spain</h3>
-        <a href="root/Iberia_ES.json" download>Download</a>
+      <h3>Spain</h3>
+      <a href="#" onclick="downloadFiles(); return false;">Download</a>
     </div>
+  
+  <script>
+      function downloadFiles() {
+          const files = [
+              "https://zenodo.org/records/15023367/files/Iberia_ES1.json?download=1",
+              "https://zenodo.org/records/15023367/files/Iberia_ES2.json?download=1",
+              "https://zenodo.org/records/15023367/files/Iberia_ES3.json?download=1"
+          ];
+  
+          files.forEach(file => {
+              const link = document.createElement("a");
+              link.href = file;
+              link.download = file.split('/').pop();
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+          });
+      }
+  </script>
     <div class="download-box">
         <h3>Portugal</h3>
-        <a href="https://zenodo.org/records/15008998/files/Iberia_PT.json?download=1" download>Download</a>
+        <a href="https://zenodo.org/records/15023367/files/Iberia_PT.json?download=1" download>Download</a>
     </div>
 </div>
 <table class="custom-table">
