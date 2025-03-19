@@ -259,6 +259,9 @@ table(df$Pathway)
 df %>% filter(Pathway != "NA") %>% distinct(LastSpeciesName)  %>% nrow() 
 df %>% filter(grepl("_", Pathway)) %>% distinct(LastSpeciesName)  %>% nrow() 
 
+# For these species with multiple pathways:.groups
+a = df %>% group_by(Pathway) %>% summarise(n=n())
+
 df1 = df %>% separate_rows(Pathway, sep= '_') %>% filter(!is.na(Pathway))
 df1 = df1[!df1$Pathway == 'NA',]
 table(df1$Pathway)
