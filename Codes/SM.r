@@ -2,7 +2,7 @@
 
 #### Figures:  --------------------
 
-## Fig S1. Overlap species composition  -------
+## Fig S1. Overlap species composition  ------- (Option 1)
 
 unique(df$Country)
 world <- ne_countries(scale = "medium", returnclass = "sf") 
@@ -101,6 +101,39 @@ p=(plots[["Spain"]] + plots[["Portugal"]]) /
 
 #Andri palette?
 ggsave(plot= p, filename = "Shared.species.svg", device= "svg")
+
+## Fig S1. Venn Diagram ------- (Option 1)
+
+install.packages("ggVennDiagram")
+install.packages("VennDiagram")
+library(ggVennDiagram)
+library(VennDiagram)
+
+species_locations <- df %>%  dplyr::select(Country, Taxon) %>% distinct()
+
+countries <- c("Spain", "Portugal", "Gibraltar", "Andorra")
+
+species_list <- lapply(countries, function(country) {
+  species_locations %>% filter(Country == country) %>%
+ pull(Taxon) %>%  unique() } )
+
+names(species_list) <- countries
+
+location_colors <- c(
+  "Spain" = "#ff7f00",
+  "Portugal" = "#33a02c", 
+  "Andorra" = "#e31a1c", 
+  "Gibraltar" = "#1f78b4")
+
+ggVennDiagram(species_list, 
+              label_alpha = 1, 
+              edge_lty = "solid",
+              set_color = location_colors) +  # Use set_color instead of scale_fill_manual
+  scale_fill_gradient(low = "white", high = "white") +  # Make fills transparent
+  scale_color_manual(values = location_colors) +  # Apply colors to the borders
+  theme_void()
+
+ggsave(last_plot(), filename = "Venn.svg", device = "svg")
 
 
 
