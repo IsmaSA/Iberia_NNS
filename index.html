@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Established non-native species in the Iberian Peninsula</title>
+    <link rel="stylesheet" href="styles.css">
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+    
+</head>
+<body>
+    <div class="container">
+        <!-- Map Section -->
+        <div class="map-section">
+            <h1>Established non-native species in the Iberian Peninsula</h1>
+            <p> <b>Established non-native species:</b> Refer to those non-native species that have established self-sustaining populations in the wild <a href="https://doi.org/10.1111/brv.13071" target="_blank">(Soto et al., 2024)</a></p>
+            <p>Explore occurrence points downloaded from GBIF </p>
+            <div id="map"></div> 
+        </div>
+        <p> Points for Spain and Portugal are limited to enhace data reading, but all points can be downloaded below.</p>
+        <p>These points have been used in Soto et al. (XXXX). You can download GBIF points below: </p>
+
+         <!-- Download Boxes -->
+  <div class="download-container">
+    <div class="download-box">
+        <h3>Andorra</h3>
+        <a href="root/Iberia_AD.json" download>Download</a>
+    </div>
+    <div class="download-box">
+        <h3>Gibraltar</h3>
+        <a href="root/Iberia_GI.json" download>Download</a>
+    </div>
+    <div class="download-box">
+        <h3>Spain</h3>
+        <a href="root/Iberia_ES.json" download>Download</a>
+    </div>
+    <div class="download-box">
+        <h3>Portugal</h3>
+        <a href="https://zenodo.org/records/15008998/files/Iberia_PT.json?download=1" download>Download</a>
+    </div>
+</div>
+<table class="custom-table">
+
+    <thead>
+      <tr>
+        <th>Country</th>
+        <th>Number of GBIF occurrences</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Andorra</td>
+        <td>3,812</td>
+      </tr>
+      <tr>
+        <td>Gibraltar</td>
+        <td>1,326</td>
+      </tr>
+      <tr>
+        <td>Spain</td>
+        <td>19,671,803</td>
+      </tr>
+      <tr>
+        <td>Portugal</td>
+        <td>4,347,516</td>
+      </tr>
+    </tbody>
+  </table>
+
+<div class="footer">
+    <p>Developed by Ismael Soto | Contact: <a href="mailto:isma-sa@hotmail.com">isma-sa@hotmail.com</a></p>
+</div>
+    </div>
+
+    <script>
+        var map = L.map('map').setView([40.0, -3.7], 6);  // Centered on Iberia
+
+        var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        });
+
+        var satelliteLayer = L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+            subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+            attribution: '&copy; Google Satellite'
+        });
+
+        var topoLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenTopoMap contributors'
+        });
+
+        osmLayer.addTo(map);
+
+
+        const speciesClusters = {
+            "Andorra": L.markerClusterGroup(),
+            "Gibraltar": L.markerClusterGroup(),
+            "Spain": L.markerClusterGroup(),
+            "Portugal": L.markerClusterGroup()
+          };
+
+        // Function to load JSON data into clusters
+        function loadJsonData(file, clusterGroup) {
+            fetch(file)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Failed to load ${file}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    data.forEach(point => {
+                        if (point.decimalLatitude && point.decimalLongitude) {
+                            var marker = L.marker([point.decimalLatitude, point.decimalLongitude])
+                                .bindPopup(`<b>Species:</b> ${point.species}`);
+                            clusterGroup.addLayer(marker);
+                        }
+                    });
+                    map.addLayer(clusterGroup);
+                })
+                .catch(error => console.error(`Error loading ${file}:`, error));
+        }
+
+        loadJsonData('root/Iberia_AD.json', speciesClusters["Andorra"]);
+        loadJsonData('root/Iberia_GI.json', speciesClusters["Gibraltar"]);
+
+// sampling data ---
+        function randomSample(array, sampleSize) {
+            if (array.length <= sampleSize) return array;  // no need to sample
+          
+            // Then return the first sampleSize elements
+            const shuffled = array.slice(); // copy
+            for (let i = shuffled.length - 1; i > 0; i--) {
+              const j = Math.floor(Math.random() * (i + 1));
+              [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled.slice(0, sampleSize);
+          }
+
+ function loadJsonDataSample(fileUrl, clusterGroup, maxPointsPerChunk) {
+  fetch(fileUrl)
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`Failed to load ${fileUrl}`);
+      }
+      return response.json();
+    })
+    .then(data => {
+      // data should be an array of { decimalLatitude, decimalLongitude, species, ... }
+      if (!Array.isArray(data)) {
+        console.warn("Expected an array but got:", data);
+        return;
+      }
+
+      // 4a) Randomly sample data to e.g. 1,000 points
+      const sampled = randomSample(data, maxPointsPerChunk);
+
+      // 4b) Create markers for the sampled points only
+      sampled.forEach(pt => {
+        if (pt.decimalLatitude && pt.decimalLongitude) {
+          const marker = L.marker([pt.decimalLatitude, pt.decimalLongitude])
+            .bindPopup(`<b>Species:</b> ${pt.species || 'Unknown'}`);
+          clusterGroup.addLayer(marker);
+        }
+      });
+
+      // 4c) Add cluster group to the map
+      map.addLayer(clusterGroup);
+
+      console.log(`File: ${fileUrl} -> loaded ${sampled.length} markers`);
+    })
+    .catch(err => console.error(`Error loading ${fileUrl}:`, err));
+}
+
+
+// Portugal points here ----
+const chunkUrls = [
+"root/Iberia_PT1.json",
+"root/Iberia_PT2.json",
+"root/Iberia_PT3.json",
+"root/Iberia_PT4.json",
+"root/Iberia_PT5.json",
+"root/Iberia_PT6.json",
+"root/Iberia_PT7.json",
+"root/Iberia_PT8.json",
+"root/Iberia_PT9.json",
+"root/Iberia_PT10.json",
+"root/Iberia_PT11json",
+"root/Iberia_PT12.json",
+"root/Iberia_PT13.json",
+"root/Iberia_PT14.json",
+"root/Iberia_PT15.json",
+"root/Iberia_PT16.json",
+"root/Iberia_PT17.json"
+];
+
+const chunkUrlsES = [
+"root/Iberia_ES1.json",
+"root/Iberia_ES2.json",
+"root/Iberia_ES3.json",
+"root/Iberia_ES4.json",
+"root/Iberia_ES5.json",
+"root/Iberia_ES6.json",
+"root/Iberia_ES7.json",
+"root/Iberia_ES8.json",
+"root/Iberia_ES9.json",
+"root/Iberia_ES10.json",
+"root/Iberia_ES11json",
+"root/Iberia_ES12.json",
+"root/Iberia_ES13.json",
+"root/Iberia_ES14.json",
+"root/Iberia_ES15.json",
+"root/Iberia_ES16.json",
+"root/Iberia_ES17.json",
+"root/Iberia_ES18.json",
+"root/Iberia_ES19json",
+"root/Iberia_ES20.json",
+"root/Iberia_ES21.json",
+"root/Iberia_ES22.json",
+"root/Iberia_ES23.json",
+"root/Iberia_ES24.json",
+"root/Iberia_ES25.json",
+"root/Iberia_ES26.json",
+"root/Iberia_ES27json",
+"root/Iberia_ES28.json",
+"root/Iberia_ES29.json",
+"root/Iberia_ES30.json",
+"root/Iberia_ES31.json",
+"root/Iberia_ES32.json",
+"root/Iberia_ES33.json",
+"root/Iberia_ES34.json",
+"root/Iberia_ES35json",
+"root/Iberia_ES36.json",
+"root/Iberia_ES37.json",
+"root/Iberia_ES38.json",
+"root/Iberia_ES39.json",
+"root/Iberia_ES40.json",
+"root/Iberia_ES41.json",
+"root/Iberia_ES42.json",
+"root/Iberia_ES43json",
+"root/Iberia_ES44.json",
+"root/Iberia_ES45.json",
+"root/Iberia_ES46.json",
+"root/Iberia_ES47.json",
+"root/Iberia_ES48.json",
+"root/Iberia_ES49.json",
+"root/Iberia_ES50.json",
+"root/Iberia_ES51json",
+"root/Iberia_ES52.json",
+"root/Iberia_ES53.json",
+"root/Iberia_ES54.json",
+"root/Iberia_ES55.json",
+"root/Iberia_ES56.json",
+"root/Iberia_ES57.json",
+"root/Iberia_ES58.json",
+"root/Iberia_ES59.json",
+"root/Iberia_ES60.json",
+"root/Iberia_ES61.json",
+"root/Iberia_ES62.json",
+"root/Iberia_ES63.json",
+"root/Iberia_ES64.json",
+"root/Iberia_ES65.json",
+"root/Iberia_ES66.json",
+"root/Iberia_ES67.json",
+"root/Iberia_ES68.json",
+"root/Iberia_ES69.json",
+"root/Iberia_ES70.json",
+"root/Iberia_ES71.json",
+"root/Iberia_ES72.json",
+"root/Iberia_ES73.json",
+];
+
+chunkUrls.forEach(url => {
+    loadJsonDataSample(url, speciesClusters["Portugal"], 1000);
+  });
+
+  chunkUrlsES.forEach(url => {
+    loadJsonDataSample(url, speciesClusters["Spain"], 5000);
+  });
+
+        // Layer controls
+        var baseLayers = {
+            "OpenStreetMap": osmLayer,
+            "Satellite View": satelliteLayer,
+            "Topographic Map": topoLayer
+        };
+
+        var overlayLayers = {
+            "Andorra": speciesClusters["Andorra"],
+            "Gibraltar": speciesClusters["Gibraltar"],
+            "Spain": speciesClusters["Spain"],
+            "Portugal": speciesClusters["Portugal"]
+        };
+
+        L.control.layers(baseLayers, overlayLayers).addTo(map);
+    </script>
+</body>
+
+</html>
