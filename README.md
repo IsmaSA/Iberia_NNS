@@ -35,6 +35,9 @@ If you have any feedback, please send me an email to: isma-sa@hotmail.com
 RS was supported by the Portuguese Foundation for Science and Technology (FCT) through national funds under the project MULTI-CRASH: Multi-dimensional ecological cascades triggered by an invasive species in pristine habitats (PTDC/CTA-AMB/0510/2021) (https://doi.org/10.54499/PTDC/CTA-AMB/0510/2021). FR is supported by an individual contract from FCT (CEEC/0482/2020) and by the project MEGAPREDATOR: A giant on the water: from predation pressure to population control of the European catfish (Silurus glanis) (https://doi.org/10.54499/PTDC/ASP-PES/4181/2021). EGB and CMM received financial support from the Spanish Ministry of Science, Innovation, and Universities (MICIU/AEI/ https://doi.org/10.13039/501100011033) and the European Union (NextGenerationEU/PRTR) through projects PID2019-103936GB-C21, FJC2021-047559-I, TED2021-129889B-I00, and RED2022-134338-T. CCB benefited from a postdoctoral contract Ref. JDC2023-052358-I, funded by the Spanish Ministry of Science, Innovation, and Universities, the Agencia Estatal de Investigación (MICIU/AEI/10.13039/501100011033) and the FSE+.
 
 ## Badges
-[![GPLv3 License](https://img.shields.io/badge/License-GPL%20v3-yellow.svg)](https://opensource.org/licenses/)
+This work is licensed under the Creative Commons Attribution-NoDerivatives 4.0 International License.
+To view a copy of this license, visit http://creativecommons.org/licenses/by-nd/4.0/.
+
+[![License: CC BY-ND 4.0](https://img.shields.io/badge/License-CC%20BY--ND%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nd/4.0/)
 
 <img src="https://www.frov.jcu.cz/images/FROV_cz.svg" alt="Logo" width="500" style="float: right; margin-center: 10px;" />
