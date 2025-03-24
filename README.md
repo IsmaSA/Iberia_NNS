@@ -6,7 +6,7 @@ Analysis of the list of **established non-native** species in the Iberian Penins
 - **Taxonomic:** (Family, Class, Phyla, Taxonomic groups)
 - **Native range:** (Paleartic, Neartic, Neotropic, Afrotropic, Indomalayan and Australasia)
 - **Pathways:** (Release, Escape, Corridor, Stowaway, Contaminant, Unaided)
-- **Temporal analysis:** (First-records)
+- **Temporal analysis:** (First-records, annual and cumulative)
 - **Spatial distibution:** (GBIF records) Webpage at: https://ismasa.github.io/Iberia_NNS/
 
 ## Clone the project
