@@ -7,6 +7,4 @@ In this folder, you will find Figures 1 and 2, used in the manuscript in an inte
 
 _Files may change in the future according to the database_
 
-
-Note to me: I need to include also the plotly.js and htmlwidgets.js from the folder I created Andorra_path_files
-
+You need to download all the files for a given country
