@@ -1,5 +1,5 @@
 
-# Over 1,700 non-native species are established in the Iberian Peninsula
+# Over 1,200 non-native species are established in the Iberian Peninsula
 
 Analysis of the list of **established non-native** species in the Iberian Peninsula (i.e., Spain, Portugal, Gibraltar and Andorra).
 
