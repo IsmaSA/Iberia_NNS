@@ -1,5 +1,5 @@
 
-# Over 1,200 non-native species are established in the Iberian Peninsula
+# Over 1,200 non-native species are established in the Iberian Peninsula (DOI: https://doi.org/10.1111/ddi.70071)
 
 Analysis of the list of **established non-native** species in the Iberian Peninsula (i.e., Spain, Portugal, Gibraltar and Andorra).
 
@@ -15,7 +15,20 @@ Analysis of the list of **established non-native** species in the Iberian Penins
 ```
 
 ## Abstract
-As a consequence of globalization, biological invasions have become an increasing concern due to multifaceted ecological and socio-economic impacts on native biota and ecosystem functioning. The Iberian Peninsula (including parts of Spain, Portugal, Andorra, and Gibraltar) is a biodiversity hotspot increasingly burdened by biological invasions. Despite the increasing availability and accessibility of data, a comprehensive assessment of established non-native species and their distribution in the Iberian Peninsula has not been conducted. To fill this gap, we compiled a dataset of 1,727 established non-native species to investigate their taxonomic composition, pathways of introduction, native biogeographic realms, annual and cumulative first records, and spatial patterns. Our results show that the majority of established non-native species are terrestrial, with vascular plants dominating, specifically via the classes Magnoliopsida and Liliopsida and families Poaceae and Asteraceae. Overall, the most common pathways of introduction were escapes from human facilities and transport-related mechanisms (contaminant and stowaway) but their importance varies among countries. Established non-native species were mostly native to the other regions of the Palearctic, followed by the Nearctic and Neotropical realms. With regard to the time of introduction, first records increased steadily until the last decades of the 20th century, when the introduction rate slowed down, while the cumulative number of first records continued to rise. Finally, our spatial analysis identified that areas with high human population density and coastal zones recorded the highest number of established non-native species. This study provides the most complete synthesis of established non-native species in the Iberian Peninsula to date, offering crucial information for research, policy, and conservation planning. Given the ongoing rise in the cumulative introduction and the role of unintentional human-driven pathways, strengthening prevention measures is vital to reduce future invasions. However, with many non-native species already established, effective control and containment efforts are equally crucial to curb further spread and mitigate consequent impacts, especially towards areas of conservation interest. 
+Aim
+As a consequence of globalisation, biological invasions have become an increasing concern due to multifaceted ecological and socio-economic impacts on biodiversity and ecosystem services. Despite the increasing availability and accessibility of data, a comprehensive assessment of established non-native species and their distribution in the Iberian Peninsula has not been conducted so far.
+
+Location
+Iberian Peninsula, including Spain, Portugal, Andorra, and Gibraltar.
+
+Methods
+We compiled a harmonised dataset of 1273 established non-native species from multiple regional, national, and global sources. We analysed taxonomic composition, introduction pathways, and native biogeographic realms. Temporal patterns were assessed using first-record data, while spatial patterns were mapped using high-resolution occurrence data from GBIF and national databases.
+
+Results
+The majority of established non-native species are vascular plants and insects, specifically of the classes Magnoliopsida and Insecta and the families Asteraceae and Formicidae, respectively. Overall, the most common pathways of introduction were escapes from human facilities and transport-related mechanisms (contaminant and stowaway), but their importance varies among countries. Established non-native species were mostly native to the other regions within the Palearctic, followed by the Nearctic and Neotropical realms. Regarding the time of introduction, first records increased steadily until the last decades of the 20th century, when the introduction rate slowed down; yet new introductions persist. Finally, our spatial analysis identified that areas with high human population density and coastal zones recorded the highest number of established non-native species.
+
+Main Conclusion
+The Iberian Peninsula hosts a high number and diversity of established non-native species. Given the ongoing rise in cumulative introductions and the role of unintentional human-driven pathways, strengthening prevention measures is vital to reduce future invasions. However, with many non-native species already established, effective management efforts are equally crucial to curb further spread and mitigate consequent impacts, especially in areas of conservation interest.
 
 **Keywords:** _Biological invasions; Spatio-temporal analysis; Invasive species; Invasion pathways; Taxonomic diversity; First-records._
 
