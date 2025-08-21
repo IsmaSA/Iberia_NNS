@@ -1,121 +1,31 @@
-# Code to create Supplementary Material 
+rm(list = ls())
 
-#### Figures:  --------------------
+# SUPPLEMENTARY MATERIAL 
 
-## Fig S1. Overlap species composition  ------- (Option 1)
+pacman::p_load(sf,dplyr,tidyr,xlsx,writexl,readxl,sp, ggplot2,terra,raster, rnaturalearth,
+rnaturalearthdata, readr, data.table,tmap, rworldmap, gbif.range)
 
-unique(df$Country)
-world <- ne_countries(scale = "medium", returnclass = "sf") 
-es<- geodata::gadm(
-    country = c("ES"),level = 1, path = getwd() ) %>%
-    sf::st_as_sf() %>%
-    sf::st_cast("MULTIPOLYGON")  %>% 
-    filter(!NAME_1 %in% c("Islas Baleares","Islas Canarias", "Ceuta y Melilla", "Azores", "Madeira"))
-pt<- geodata::gadm(
-    country = c("PT"),level = 1, path = getwd() ) %>%
-    sf::st_as_sf() %>%
-    sf::st_cast("MULTIPOLYGON") %>% 
-    filter(!NAME_1 %in% c("Islas Baleares","Islas Canarias", "Ceuta y Melilla", "Azores", "Madeira"))
-ad<-  world[world$name=="Andorra",]
-world_states <- ne_states(returnclass = "sf")
-gb <- world_states[world_states$name == "Gibraltar", ]
+df <- readxl::read_xlsx("./Submission/Diversity&Distributions/Submission 2/ListNNS.Iberia.v.2.xlsx", sheet=2)
+df = df[df$canonicalName !='Austropotamobius fulcisianus*',]
+colSums(is.na(df))
 
-plot(gb)
-col <- c("Spain" = "#F56455FF", "Portugal" = "#206a0c", 
-         "Andorra" = "#cfc90e",  "Gibraltar" = "#ccc6c6")
+unique(df$canonicalName) #1273 species
 
-shared_species
-c <- "Gibraltar"
-plots = list()
-for(c in unique(df$Country)){
-  shared <- shared_species[shared_species$Location1==c,]
-  shared <- shared[,c(-7)]
-  if(c=="Spain"){
-    shape <- es
-  } else if(c=="Portugal"){
-    shape <- pt
-  } else if(c=="Andorra"){
-    shape <- ad
-  } else if(c=="Gibraltar"){
-    shape <- gb
-  }
-  shape <- st_transform(shape, crs = st_crs(4326))
-  combined_geometry <- st_union(shape)
-  combined_shape <- st_sf(geometry = st_sfc(combined_geometry), crs = st_crs(shape))
-  plot(combined_shape, col = NA, border = "black")
- 
- if(c=="Spain"){
-    size= 0.3
-  } else if(c=="Portugal"){ size= 0.2}else if(c=="Andorra"){ 
-    size= 0.01}else if(c=="Gibraltar"){ 
-      size= 0.001}
-grid <- st_make_grid(combined_shape, cellsize = size,  square = TRUE)
-  grid_sf <- st_as_sf(grid)
-  grid_sf <- grid_sf[st_intersects(grid_sf, combined_shape, sparse = FALSE), ]
 
-  plot(grid_sf)
-  grid_sf <- grid_sf %>%  mutate(grid_id = 1:n())
-  
-  total_grids <- nrow(grid_sf)
-
-if(c %in% c('Andorra', 'Gibraltar')){
-shared$proportion <- shared$Overlap1_to_2 / sum(shared$Overlap1_to_2)
-shared$grid_count <- round(shared$proportion * total_grids)
-shared$grid_count[which.max(shared$grid_count)] <- 
-  total_grids - sum(shared$grid_count[-which.max(shared$grid_count)])
-categories <- unlist(mapply(rep, shared$Location2, shared$grid_count))
-
-  grid_sf$Country <- categories
-} else{
-  z = 100- sum(shared$Overlap1_to_2)
-  shared =  rbind(shared, data.frame(Location1 = c, Location2 = c,Shared = 0, Total1 = 0, Total2 = 0, Overlap1_to_2 = z))
-  shared$proportion <- shared$Overlap1_to_2 /100
-  shared$grid_count <- round(shared$proportion * total_grids)
-  shared$grid_count[which.max(shared$grid_count)] <- 
-    total_grids - sum(shared$grid_count[-which.max(shared$grid_count)])
-
-  categories <- unlist(mapply(rep, shared$Location2, shared$grid_count))
-  grid_sf$Country <- categories
-}
-text_box_x <- st_bbox(es)$xmax - 1.7
-text_box_y <- st_bbox(es)$ymax - 1.35
-shared_text <- paste0(shared$Location2, ": ", round(shared$Overlap1_to_2, 2), "%")
-
-  p1<- ggplot() +
-    geom_sf(data = grid_sf, aes(fill = Country), color = "black") +
-    geom_sf(data = combined_shape, fill = NA, color = "black") +  
-    scale_fill_manual(values = col) + 
-    theme_void() +
-    labs(fill = "Country") +
-    theme(
-      legend.position = "right",
-      legend.text = element_text(size = 10),
-      legend.title = element_text(size = 12)  )
-  p1
-  plots[[c]] =p1
-}
-library(patchwork)
-p=(plots[["Spain"]] + plots[["Portugal"]]) / 
-  (plots[["Andorra"]] + plots[["Gibraltar"]]) + 
-  plot_layout(heights = c(2, 0.8)) 
-
-#Andri palette?
-ggsave(plot= p, filename = "Shared.species.svg", device= "svg")
-
-## Fig S1. Venn Diagram ------- (Option 1)
+# Fig S1. Venn Diagram ------- (Option 1)
 
 install.packages("ggVennDiagram")
 install.packages("VennDiagram")
 library(ggVennDiagram)
 library(VennDiagram)
 
-species_locations <- df %>%  dplyr::select(Country, Taxon) %>% distinct()
+species_locations <- df %>%  dplyr::select(Country, canonicalName) %>% distinct()
 
 countries <- c("Spain", "Portugal", "Gibraltar", "Andorra")
 
 species_list <- lapply(countries, function(country) {
   species_locations %>% filter(Country == country) %>%
- pull(Taxon) %>%  unique() } )
+ pull(canonicalName) %>%  unique() } )
 
 names(species_list) <- countries
 
@@ -125,15 +35,15 @@ location_colors <- c(
   "Andorra" = "#e31a1c", 
   "Gibraltar" = "#1f78b4")
 
-ggVennDiagram(species_list, 
-              label_alpha = 1, 
+p<- ggVennDiagram(species_list, 
+              label_alpha = 0.7, 
               edge_lty = "solid",
               set_color = location_colors) +  # Use set_color instead of scale_fill_manual
   scale_fill_gradient(low = "white", high = "white") +  # Make fills transparent
   scale_color_manual(values = location_colors) +  # Apply colors to the borders
   theme_void()
 
-ggsave(last_plot(), filename = "Venn.svg", device = "svg")
+ggsave(p, filename = "./UpdateResults/Plots/06 FigS11.svg", device = "svg")
 
 
 
@@ -147,7 +57,6 @@ group_colors <- c(
   "Microorganisms" = "#72c6b1", "Molluscs" = "#fb9a99", "Reptiles" = "#dd1a1a",
   "Vascular plants" = "#76b379", "Other invertebrates" = "#cab2d6")
 
-colnames(df)[3] <-"Group"
 df1= df %>% group_by(Country, Group) %>% summarise(n = n()) %>% mutate(
   Country = factor(Country, levels = c( "Spain", "Portugal","Andorra", "Gibraltar")) )
 
@@ -161,11 +70,11 @@ facet_wrap(vars(Country), scales = "free_x", strip.position = "top") +
   theme(
     strip.text = element_text(face = "bold"),
     legend.position = "none")
-ggsave(p, filename = "FigS1.svg", width = 10, height = 5, dpi = 300)
+ggsave(p, filename = "./UpdateResults/Plots/07 FigS2.svg", width = 10, height = 5, dpi = 300)
 
 
 #### Figure S3: Temporal focus ------------
-# Data comes from temporal section
+# Data comes from 06 First.Records.r
 
 p = ggplot(res_anual, aes(x = year, y = n, color = ISO3, group = ISO3)) +
   ylim(0,30)+  xlim(1900,2025)+
@@ -192,6 +101,7 @@ p = ggplot(res_anual, aes(x = year, y = n, color = ISO3, group = ISO3)) +
   geom_vline(xintercept = c(1800, 1986, 2014), linetype = "dashed", color = "grey50", size = 0.5, alpha=0.5) 
 
 p
+ggsave(p, filename = "./UpdateResults/Plots/08 FigS3.svg", width = 10, height = 5, dpi = 300)
 
 
 #### Figure S4: Spatial data (normalised) ------------
