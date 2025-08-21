@@ -20,7 +20,7 @@ As a consequence of globalization, biological invasions have become an increasin
 **Keywords:** _Biological invasions; Spatio-temporal analysis; Invasive species; Invasion pathways; Taxonomic diversity; First-records._
 
 ## Authors
-- [Ismael Soto](https://github.com/IsmaSA), Francisco J. Oficialdegui, Sergio Bedmar, César Capinha, Ronaldo Sousa, Emili García-Berthou, Carolina Mendes Muniz, Javier Oscoz, Carlos Cano-Barbacil, Pedro M. Anastácio, Elena Angulo, Christian Arnanz, Margarita Florencio, Antonín Kouba, Rafael Miranda, Francisco J. Oliva-Paterna, Filipe Ribeiro, Phillip J. Haubrock, Elizabeta Briski
+- [Ismael Soto](https://github.com/IsmaSA), Francisco J. Oficialdegui, Sergio Bedmar, César Capinha, Ronaldo Sousa, Emili García-Berthou, Carolina Mendes Muniz, Javier Oscoz, Carlos Cano-Barbacil, Pedro M. Anastácio, Elena Angulo, Christian Arnanz, Margarita Florencio, Antonín Kouba, Rafael Miranda, Francisco J. Oliva-Paterna, Filipe Ribeiro, Miguel Porto, Meritxel Dalmau, Clara Plavadell, Jordi Lopez-Puyol, Phillip J. Haubrock, Elizabeta Briski
   
 ## Related papers 
 - _Zamora-Marín, J. M., Herrero-Reyes, A. A., Ruiz-Navarro, A., & Oliva-Paterna, F. J. (2023). Non-indigenous aquatic fauna in transitional waters from the Spanish Mediterranean coast: A comprehensive assessment. Marine Pollution Bulletin, 191, 114893._
